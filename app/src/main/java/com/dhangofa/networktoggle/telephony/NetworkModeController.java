@@ -12,11 +12,13 @@ import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
 
 public final class NetworkModeController {
+    private final XiaomiFiveGModeController xiaomiFiveGController;
     private final ShizukuBinderModeController shizukuBinderController;
     private final LegacyRootModeController legacyController;
     private final ModernRootModeController modernRootController;
 
     public NetworkModeController(SimResolver simResolver) {
+        this.xiaomiFiveGController = new XiaomiFiveGModeController(simResolver);
         this.shizukuBinderController = new ShizukuBinderModeController(simResolver);
         this.legacyController = new LegacyRootModeController(
                 simResolver.getContext(), simResolver);
@@ -28,17 +30,27 @@ public final class NetworkModeController {
             return CommandResult.failed("", "No execution mode selected.");
         }
 
-        // 1. Shizuku Fast-Path (Binder IPC)
+        // 1. HyperOS/MIUI native user-5G path for Preferred 5G/4G.
+        // It mirrors Xiaomi's own "Enable 5G network" toggle and avoids rewriting
+        // the complete RAT bitmask. If unavailable/failing, fall through to the
+        // existing generic implementation.
+        CommandResult xiaomiResult =
+                xiaomiFiveGController.applyIfSupported(networkMode, executionMode);
+        if (xiaomiResult != null && xiaomiResult.isSuccess()) {
+            return xiaomiResult;
+        }
+
+        // 2. Shizuku Fast-Path (Binder IPC)
         if (executionMode == ExecutionMode.SHIZUKU) {
             return shizukuBinderController.apply(networkMode, executionMode);
         }
 
-        // 2. Root Legacy Fallback (Android 11 and below)
+        // 3. Root Legacy Fallback (Android 11 and below)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return legacyController.apply(networkMode, executionMode);
         }
 
-        // 3. Root Modern Fallback (Android 12+)
+        // 4. Root Modern Fallback (Android 12+)
         return modernRootController.apply(networkMode, executionMode);
     }
 }

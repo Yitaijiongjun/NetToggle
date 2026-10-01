@@ -13,7 +13,6 @@ import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import rikka.shizuku.Shizuku;
 import android.content.pm.PackageManager;
-import android.widget.Toast;
 
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.model.CommandResult;
@@ -196,7 +195,7 @@ public class NetworkTileService extends TileService {
                             && preferredMode != NetworkMode.UNKNOWN
                             && realMode != preferredMode
                             && IS_SWITCHING.compareAndSet(false, true)) {
-                        updateTileSwitchingUI();
+                        // Keep the current tile appearance while the background switch runs.
                         AppExecutors.executeTelephony(() -> {
                             applyModeInternal(preferredMode, appPreferences.getExecutionMode(), true);
                         });
@@ -214,7 +213,7 @@ public class NetworkTileService extends TileService {
         super.onClick();
 
         if (!IS_SWITCHING.compareAndSet(false, true)) {
-            updateTileSwitchingUI();
+            // Ignore repeated taps while a switch is already in progress.
             return;
         }
 
@@ -227,8 +226,9 @@ public class NetworkTileService extends TileService {
 
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
-        updateTileSwitchingUI();
 
+        // Do not publish a temporary "Switching..." tile state. The tile keeps showing
+        // the last confirmed mode until the command succeeds or fails.
         AppExecutors.executeTelephony(() -> {
             applyModeInternal(nextMode, executionMode, false);
         });
@@ -252,7 +252,6 @@ public class NetworkTileService extends TileService {
 
             if (info1 == null || info2 == null) {
                 mainHandler.post(() -> {
-                    Toast.makeText(getApplicationContext(), getString(R.string.toast_no_sim_target_slot), Toast.LENGTH_SHORT).show();
                     appPreferences.onTargetSimChanged(com.dhangofa.networktoggle.model.TargetSim.AUTO);
                     updateTileUI(appPreferences.getCachedNetworkMode());
                     IS_SWITCHING.set(false);
@@ -285,7 +284,6 @@ public class NetworkTileService extends TileService {
             int slotIndex = simResolver.resolveTargetSlotIndex(executionMode);
             if (!simResolver.isValidSlotIndex(slotIndex)) {
                 mainHandler.post(() -> {
-                    Toast.makeText(getApplicationContext(), getString(R.string.toast_no_sim_target_slot), Toast.LENGTH_SHORT).show();
                     appPreferences.onTargetSimChanged(com.dhangofa.networktoggle.model.TargetSim.AUTO);
                     updateTileUI(appPreferences.getCachedNetworkMode());
                     IS_SWITCHING.set(false);
@@ -354,22 +352,9 @@ public class NetworkTileService extends TileService {
             NetworkMode fallbackMode = appPreferences.getCachedNetworkMode();
             mainHandler.post(() -> {
                 updateTileUI(fallbackMode);
-                if (appPreferences.hasAutoSimError()) {
-                    showAutoSimErrorToast();
-                }
                 IS_SWITCHING.set(false);
             });
         }
-    }
-
-    private void updateTileSwitchingUI() {
-        Tile tile = getQsTile();
-        if (tile == null) return;
-
-        tile.setState(Tile.STATE_INACTIVE);
-        tile.setLabel(getString(R.string.tile_switching));
-        tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
-        tile.updateTile();
     }
 
     private void updateTileUI(NetworkMode mode) {
@@ -424,7 +409,9 @@ public class NetworkTileService extends TileService {
 
             tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
         } else {
-            tile.setState(Tile.STATE_ACTIVE);
+            tile.setState(appPreferences.isTileModeActive(mode)
+                    ? Tile.STATE_ACTIVE
+                    : Tile.STATE_INACTIVE);
             tile.setLabel(mode.getTileLabel());
 
             // Determine badge and auto state
@@ -453,11 +440,4 @@ public class NetworkTileService extends TileService {
         tile.updateTile();
     }
 
-    private void showAutoSimErrorToast() {
-        Toast.makeText(
-                this,
-                getString(R.string.toast_auto_sim_failed),
-                Toast.LENGTH_LONG
-        ).show();
-    }
 }

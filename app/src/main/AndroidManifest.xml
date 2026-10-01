@@ -53,10 +53,8 @@
         <activity
             android:name=".ShortcutActionActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-            android:launchMode="singleInstance" />
+            android:theme="@style/Theme.NetToggle.TransparentAction"
+            android:excludeFromRecents="true" />
 
         <!-- Main UI screen -->
         <activity

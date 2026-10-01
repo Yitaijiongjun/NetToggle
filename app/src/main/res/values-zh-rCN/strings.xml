@@ -94,7 +94,8 @@
     <string name="toast_select_at_least_2">请至少选择 2 种模式。</string>
     <string name="toast_select_up_to_3">最多可选择 3 种模式。</string>
     <string name="cycle_prefix">轮播：</string>
-    <string name="tile_switching">切换中...</string>
+    <string name="tile_active_states">磁贴高亮状态</string>
+    <string name="tile_active_states_description">勾选的模式显示为亮，未勾选的模式显示为灭。</string>
     <string name="tile_shizuku_unavailable">Shizuku 不可用</string>
     <string name="tile_root_unavailable">Root 不可用</string>
     <string name="tile_error_check_app">错误（请检查应用）</string>
@@ -177,6 +178,8 @@
     <string name="shortcut_hash_format">#%d</string>
     <string name="auto_restore_preferred_mode">下拉通知栏时自动恢复</string>
     <string name="auto_restore_preferred_mode_description">当因运营商、发热或系统更改导致网络降级时，下拉通知栏会自动重新应用您上次切换的模式</string>
+    <string name="auto_collapse_quick_settings">点击后自动关闭控制栏</string>
+    <string name="auto_collapse_quick_settings_description">点击快捷磁贴后自动收起快捷设置/通知控制栏，再执行网络模式切换</string>
     <string name="validation_token_required">安全令牌不能为空</string>
     <string name="copy_token">复制令牌</string>
     <string name="token_copied_to_clipboard">令牌已复制到剪贴板</string>

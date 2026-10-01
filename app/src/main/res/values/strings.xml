@@ -94,7 +94,8 @@
     <string name="toast_select_at_least_2">Select at least 2 tile modes</string>
     <string name="toast_select_up_to_3">You can select up to 3 tile modes</string>
     <string name="cycle_prefix">Cycle: </string>
-    <string name="tile_switching">Switching...</string>
+    <string name="tile_active_states">Tile highlight states</string>
+    <string name="tile_active_states_description">Checked modes are highlighted; unchecked modes are dimmed.</string>
     <string name="tile_shizuku_unavailable">Shizuku Unavailable</string>
     <string name="tile_root_unavailable">Root Unavailable</string>
     <string name="tile_error_check_app">Error Check App</string>
@@ -180,6 +181,8 @@
     <!-- Auto-restore preferred mode -->
     <string name="auto_restore_preferred_mode">Auto-Restore on shade pull</string>
     <string name="auto_restore_preferred_mode_description">Automatically re-applies your last toggled mode when shade is pulled if carrier or thermals downgraded or the system altered it</string>
+    <string name="auto_collapse_quick_settings">Close control panel after tap</string>
+    <string name="auto_collapse_quick_settings_description">Automatically collapses Quick Settings after a tile tap before applying the network change</string>
     <string name="validation_token_required">Security token cannot be empty</string>
     <string name="copy_token">Copy Token</string>
     <string name="token_copied_to_clipboard">Token copied to clipboard</string>

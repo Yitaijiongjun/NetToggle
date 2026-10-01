@@ -24,6 +24,9 @@ final class PrivilegedModeReader {
     }
 
     NetworkMode readCurrentMode(ExecutionMode executionMode, TargetSim targetSim) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return readPhoneMode(executionMode, targetSim, false);
+        }
         int targetSubId = targetSim != null
                 ? simResolver.resolveTargetSubId(executionMode, targetSim)
                 : simResolver.resolveTargetSubId(executionMode);
@@ -59,5 +62,29 @@ final class PrivilegedModeReader {
 
         CommandResult result = executor.execute(command);
         return result.isSuccess() ? NetworkMode.fromLegacyMode(ShellValueParser.extractFirstInt(result.getStdout())) : NetworkMode.UNKNOWN;
+    }
+
+    NetworkMode readEffectiveMode(ExecutionMode executionMode, TargetSim target) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                ? readPhoneMode(executionMode, target, true) : readCurrentMode(executionMode, target);
+    }
+
+    private NetworkMode readPhoneMode(ExecutionMode executionMode, TargetSim target, boolean effective) {
+        int subId = simResolver.resolveTargetSubId(executionMode, target);
+        if (!simResolver.isValidSubId(subId)) return NetworkMode.UNKNOWN;
+        String apk = context.getApplicationInfo().sourceDir;
+        String command = "CLASSPATH='" + apk.replace("'", "'\\''") + "' app_process /system/bin "
+                + NetworkModeRootReadPayload.class.getName() + " " + subId + " " + (effective ? "effective" : "user");
+        CommandExecutor executor = CommandExecutorFactory.forMode(executionMode);
+        if (executor == null) return NetworkMode.UNKNOWN;
+        CommandResult result = executor.execute(command);
+        if (!result.isSuccess()) return NetworkMode.UNKNOWN;
+        for (String line : result.getStdout().split("\\n")) {
+            if (line.startsWith("mode=")) {
+                try { return NetworkMode.fromAllowedMask(Long.parseLong(line.substring(5).trim())); }
+                catch (NumberFormatException ignored) { return NetworkMode.UNKNOWN; }
+            }
+        }
+        return NetworkMode.UNKNOWN;
     }
 }

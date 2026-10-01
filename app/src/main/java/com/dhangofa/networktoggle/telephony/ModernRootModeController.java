@@ -38,6 +38,12 @@ final class ModernRootModeController {
             return CommandResult.failed(command, "No execution mode selected.");
         }
 
-        return executor.execute(command);
+        CommandResult result = executor.execute(command);
+        // AOSP cmd phone prints "failed" but still returns exit code 0 when its
+        // Binder setter returns false. Do not treat that as a successful dispatch.
+        if (result.isSuccess() && result.getStdout().contains("set-allowed-network-types-for-users failed")) {
+            return CommandResult.failed(command, result.getStdout());
+        }
+        return result;
     }
 }

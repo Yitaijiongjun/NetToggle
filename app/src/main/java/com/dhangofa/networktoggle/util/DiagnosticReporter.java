@@ -9,6 +9,7 @@ import com.dhangofa.networktoggle.model.DiagnosticError;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.telephony.SimResolver;
+import com.dhangofa.networktoggle.telephony.NetworkModeReader;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
@@ -115,6 +116,15 @@ public class DiagnosticReporter {
             sb.append("\n");
         }
 
+        sb.append("[LIVE TELEPHONY READBACK]\n");
+        NetworkModeReader reader = new NetworkModeReader(context, prefs, simResolver);
+        if (targetSim == TargetSim.BOTH) {
+            sb.append("SIM 1: ").append(reader.describeCurrentState(TargetSim.SIM_1)).append("\n");
+            sb.append("SIM 2: ").append(reader.describeCurrentState(TargetSim.SIM_2)).append("\n");
+        } else {
+            sb.append(reader.describeCurrentState(targetSim)).append("\n");
+        }
+        sb.append("Cached UI mode: ").append(prefs.getCachedNetworkMode()).append("\n\n");
         sb.append("[LAST ERROR EVENT]\n");
         DiagnosticError error = prefs.getLastError();
         if (error != null) {

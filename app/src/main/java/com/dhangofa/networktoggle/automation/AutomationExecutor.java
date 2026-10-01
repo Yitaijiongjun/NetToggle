@@ -8,6 +8,7 @@ import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.telephony.NetworkModeController;
+import com.dhangofa.networktoggle.telephony.NetworkModeReader;
 import com.dhangofa.networktoggle.telephony.SimResolver;
 import com.dhangofa.networktoggle.NetworkTileService;
 import android.service.quicksettings.TileService;
@@ -166,29 +167,37 @@ public class AutomationExecutor {
                         sim2Success = true;
                     }
                 } else {
-                    errorMessage = "Failed to change network mode via automation: " + result.getStderr();
+                    String detail = result.getExceptionMessage();
+                    if (detail == null || detail.trim().isEmpty()) {
+                        detail = result.getStderr();
+                    }
+                    if (detail == null || detail.trim().isEmpty()) {
+                        detail = "Unknown backend failure.";
+                    }
+                    errorMessage = "Failed to change network mode via automation: " + detail;
                     Log.e(TAG, errorMessage);
                     saveFailure(prefs, result, errorMessage);
                 }
             }
 
             if (success) {
-                prefs.setCachedNetworkMode(request.mode);
-                prefs.setLastNetworkCheckTimestamp(System.currentTimeMillis());
                 prefs.setAutoSimError(false);
                 prefs.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
-                if (request.updatePreferredMode) {
+                if (request.updatePreferredMode && request.target == prefs.getTargetSim()) {
                     prefs.setLastUserSelectedMode(request.mode);
                 }
             } else if (isPartial) {
-                prefs.setCachedNetworkMode(com.dhangofa.networktoggle.model.NetworkMode.UNKNOWN);
-                prefs.setLastNetworkCheckTimestamp(System.currentTimeMillis());
                 prefs.setTileErrorState(AppPreferences.TILE_ERROR_CMD);
             } else {
                 prefs.setTileErrorState(AppPreferences.TILE_ERROR_CMD);
             }
+        } catch (Throwable error) {
+            success = false;
+            errorMessage = "Network operation failed: " + error;
+            saveFailure(prefs, null, errorMessage);
         } finally {
             simResolver.setOverrideTargetSim(null);
+            new NetworkModeReader(context, prefs, simResolver).refreshCache();
             TileService.requestListeningState(context, new ComponentName(context, NetworkTileService.class));
         }
 
@@ -197,7 +206,16 @@ public class AutomationExecutor {
 
     private static void saveFailure(AppPreferences prefs, CommandResult result, String context) {
         if (result != null) {
-            prefs.setLastError(result.getCommand(), result.getExitCode(), result.getStdout(), result.getStderr(), context);
+            String exception = result.getExceptionMessage();
+            if (exception == null || exception.trim().isEmpty()) {
+                exception = context;
+            }
+            prefs.setLastError(
+                    result.getCommand(),
+                    result.getExitCode(),
+                    result.getStdout(),
+                    result.getStderr(),
+                    exception);
         } else {
             prefs.setLastError("", -1, "", context, context);
         }

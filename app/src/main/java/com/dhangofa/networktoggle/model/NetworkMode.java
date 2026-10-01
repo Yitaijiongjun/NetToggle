@@ -38,6 +38,16 @@ public enum NetworkMode {
     public String getBinaryMask() { return binaryMask; }
     public int getLegacyMode() { return legacyMode; }
 
+    public static NetworkMode fromAllowedMask(long mask) {
+        if (mask <= 0) return UNKNOWN;
+        long nr = 1L << 19;
+        long lte = (1L << 12) | (1L << 18); // LTE and LTE_CA
+        long gsm = (1L << 0) | (1L << 1) | (1L << 15); // GPRS, EDGE, GSM
+        if ((mask & nr) != 0) return (mask & ~nr) == 0 ? FIVE_G_ONLY : PREFERRED_5G;
+        if ((mask & lte) != 0) return (mask & ~lte) == 0 ? FOUR_G_ONLY : PREFERRED_4G;
+        return (mask & ~gsm) == 0 ? TWO_G_ONLY : PREFERRED_3G;
+    }
+
     public static NetworkMode fromStateValue(int value) {
         for (NetworkMode mode : values()) {
             if (mode.stateValue == value) return mode;

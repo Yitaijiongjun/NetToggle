@@ -119,7 +119,9 @@ public class ExecutionStateController {
                         || appPreferences.getExecutionMode() != ExecutionMode.ROOT) return;
                 if (finalGranted) {
                     statusCallback.onStatusUpdate(activity.getString(R.string.status_root_authorized), 1);
-                    appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
+                    if (appPreferences.getTileErrorState() == AppPreferences.TILE_ERROR_ROOT) {
+                        appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
+                    }
                 } else {
                     statusCallback.onStatusUpdate(activity.getString(R.string.status_root_denied), 2);
                     appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_ROOT);
@@ -145,7 +147,9 @@ public class ExecutionStateController {
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 statusCallback.onStatusUpdate(activity.getString(R.string.status_shizuku_authorized), 1);
                 if (appPreferences != null) {
-                    appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
+                    if (appPreferences.getTileErrorState() == AppPreferences.TILE_ERROR_SHIZUKU) {
+                        appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
+                    }
                     TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
                 }
                 return;

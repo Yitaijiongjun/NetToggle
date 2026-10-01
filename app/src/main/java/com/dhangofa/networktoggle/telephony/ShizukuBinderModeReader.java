@@ -88,24 +88,7 @@ final class ShizukuBinderModeReader {
                 }
 
                 long bitmask = ((Number) value).longValue();
-
-                for (NetworkMode mode : NetworkMode.values()) {
-                    if (mode.getBinaryMask() != null && Long.parseLong(mode.getBinaryMask(), 2) == bitmask) {
-                        return mode;
-                    }
-                }
-
-                if ((bitmask & (1L << 19)) != 0) {
-                    return (bitmask & (1L << 12)) == 0 ? NetworkMode.FIVE_G_ONLY : NetworkMode.PREFERRED_5G;
-                }
-
-                if ((bitmask & (1L << 12)) != 0) {
-                    return (bitmask & (1L << 13)) == 0 && (bitmask & (1L << 9)) == 0
-                            ? NetworkMode.FOUR_G_ONLY
-                            : NetworkMode.PREFERRED_4G;
-                }
-
-                return NetworkMode.PREFERRED_3G;
+                return NetworkMode.fromAllowedMask(bitmask);
             }
 
             Method method = TelephonyMethodHelper.find(
@@ -130,5 +113,54 @@ final class ShizukuBinderModeReader {
         } catch (Throwable ignored) {
             return NetworkMode.UNKNOWN;
         }
+    }
+
+    NetworkMode readEffectiveMode(ExecutionMode executionMode, com.dhangofa.networktoggle.model.TargetSim target) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return readCurrentMode(executionMode, target);
+        int subId = simResolver.resolveTargetSubId(executionMode, target);
+        if (!simResolver.isValidSubId(subId)) return NetworkMode.UNKNOWN;
+        try {
+            org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("Lcom/android/internal/telephony/");
+            IBinder raw = SystemServiceHelper.getSystemService("phone");
+            Class<?> stub = Class.forName("com.android.internal.telephony.ITelephony$Stub");
+            Object phone = stub.getDeclaredMethod("asInterface", IBinder.class).invoke(null, new ShizukuBinderWrapper(raw));
+            Class<?> api = Class.forName("com.android.internal.telephony.ITelephony");
+            Method method = TelephonyMethodHelper.find(api, "getAllowedNetworkTypesBitmask", new Class<?>[] {int.class});
+            if (method == null) return NetworkMode.UNKNOWN;
+            Object mask = method.invoke(phone, subId);
+            return mask instanceof Number ? NetworkMode.fromAllowedMask(((Number) mask).longValue()) : NetworkMode.UNKNOWN;
+        } catch (Throwable ignored) { return NetworkMode.UNKNOWN; }
+    }
+
+    String describeState(ExecutionMode mode, com.dhangofa.networktoggle.model.TargetSim target) {
+        SimResolver.SimInfo info = simResolver.resolveTargetSimInfo(mode, target);
+        if (info == null) return "SIM unavailable";
+        StringBuilder trace = new StringBuilder("slot=" + info.slotIndex + ", subId=" + info.subId);
+        try {
+            org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("Lcom/android/internal/telephony/");
+            IBinder raw = SystemServiceHelper.getSystemService("phone");
+            Class<?> stub = Class.forName("com.android.internal.telephony.ITelephony$Stub");
+            Object phone = stub.getDeclaredMethod("asInterface", IBinder.class).invoke(null, new ShizukuBinderWrapper(raw));
+            Class<?> api = Class.forName("com.android.internal.telephony.ITelephony");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Method reason = TelephonyMethodHelper.find(api, "getAllowedNetworkTypesForReason", new Class<?>[] {int.class, int.class});
+                if (reason != null) {
+                    for (int i = 0; i < 3; i++) {
+                        Object value = reason.invoke(phone, info.subId, i);
+                        trace.append(", ").append(new String[] {"USER", "POWER", "CARRIER"}[i]).append("Mask=").append(value);
+                    }
+                }
+                Method effective = TelephonyMethodHelper.find(api, "getAllowedNetworkTypesBitmask", new Class<?>[] {int.class});
+                if (effective != null) trace.append(", effectiveMask=").append(effective.invoke(phone, info.subId));
+            }
+            Method data = TelephonyMethodHelper.find(api, "getDataNetworkTypeForSubscriber",
+                    new Class<?>[] {int.class, String.class, String.class}, new Class<?>[] {int.class, String.class});
+            if (data != null) trace.append(", dataNetworkType=").append(data.getParameterCount() == 3
+                    ? data.invoke(phone, info.subId, "com.android.shell", null)
+                    : data.invoke(phone, info.subId, "com.android.shell"));
+        } catch (Throwable error) {
+            trace.append(", readError=").append(TelephonyMethodHelper.describe(error));
+        }
+        return trace.toString();
     }
 }

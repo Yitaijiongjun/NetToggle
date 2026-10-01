@@ -180,6 +180,6 @@ public final class SimResolver {
     }
 
     public boolean isValidSubId(int subId) {
-        return subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID && subId != INVALID_SUB_ID;
+        return subId >= 0;
     }
 }

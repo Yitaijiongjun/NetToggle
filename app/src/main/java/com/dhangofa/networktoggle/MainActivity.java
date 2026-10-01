@@ -18,6 +18,7 @@ import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
 import com.dhangofa.networktoggle.model.NetworkMode;
+import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.telephony.NetworkCapabilityResolver;
 import com.dhangofa.networktoggle.telephony.NetworkModeController;
@@ -159,6 +160,9 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
 
     protected void onResume() {
         super.onResume();
+        if (this.modeReader != null && this.appPreferences.getExecutionMode() != ExecutionMode.NONE) {
+            AppExecutors.executeTelephony(() -> this.modeReader.refreshCache());
+        }
         if (this.targetSimUiController != null) {
             this.targetSimUiController.updateAutoSimWarning();
         }

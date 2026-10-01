@@ -27,7 +27,9 @@ public final class AppPreferences {
     private static final String KEY_EXTERNAL_AUTOMATION = "external_automation_enabled";
     private static final String KEY_AUTOMATION_TOKEN = "automation_token";
     private static final String KEY_TILE_CYCLE_MODES = "tile_cycle_modes";
+    private static final String KEY_TILE_ACTIVE_MODES = "tile_active_modes";
     private static final String KEY_AUTO_RESTORE_ENABLED = "auto_restore_enabled";
+    private static final String KEY_AUTO_COLLAPSE_QS = "auto_collapse_quick_settings";
     private static final String KEY_LAST_USER_SELECTED_MODE = "last_user_selected_mode";
 
     private static final String KEY_LAST_ERROR_CMD = "last_error_cmd";
@@ -109,6 +111,14 @@ public final class AppPreferences {
 
     public void setAutoRestorePreferredModeEnabled(boolean enabled) {
         preferences.edit().putBoolean(KEY_AUTO_RESTORE_ENABLED, enabled).apply();
+    }
+
+    public boolean isAutoCollapseQuickSettingsEnabled() {
+        return preferences.getBoolean(KEY_AUTO_COLLAPSE_QS, false);
+    }
+
+    public void setAutoCollapseQuickSettingsEnabled(boolean enabled) {
+        preferences.edit().putBoolean(KEY_AUTO_COLLAPSE_QS, enabled).apply();
     }
 
     public NetworkMode getLastUserSelectedMode() {
@@ -226,6 +236,60 @@ public final class AppPreferences {
             value.append(mode.name());
         }
         preferences.edit().putString(KEY_TILE_CYCLE_MODES, value.toString()).apply();
+    }
+
+    /**
+     * Controls whether a network mode should render the QS tile as highlighted (ACTIVE)
+     * or dimmed (INACTIVE). Existing installs default to all modes highlighted until
+     * the user explicitly customizes this setting.
+     */
+    public boolean isTileModeActive(NetworkMode mode) {
+        if (mode == null || mode == NetworkMode.UNKNOWN) return false;
+        return getTileActiveModes().contains(mode);
+    }
+
+    public List<NetworkMode> getTileActiveModes() {
+        List<NetworkMode> modes = new ArrayList<>();
+
+        // Preserve the historical behavior for existing installs: every known mode is active.
+        if (!preferences.contains(KEY_TILE_ACTIVE_MODES)) {
+            for (NetworkMode mode : NetworkMode.values()) {
+                if (mode != NetworkMode.UNKNOWN) modes.add(mode);
+            }
+            return modes;
+        }
+
+        String saved = preferences.getString(KEY_TILE_ACTIVE_MODES, "");
+        if (saved == null || saved.trim().isEmpty()) return modes;
+
+        String[] ids = saved.split(",");
+        for (String id : ids) {
+            try {
+                NetworkMode mode = NetworkMode.valueOf(id.trim());
+                if (mode != NetworkMode.UNKNOWN && !modes.contains(mode)) modes.add(mode);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return modes;
+    }
+
+    public void setTileModeActive(NetworkMode mode, boolean active) {
+        if (mode == null || mode == NetworkMode.UNKNOWN) return;
+
+        List<NetworkMode> modes = getTileActiveModes();
+        if (active) {
+            if (!modes.contains(mode)) modes.add(mode);
+        } else {
+            modes.remove(mode);
+        }
+
+        StringBuilder value = new StringBuilder();
+        for (NetworkMode activeMode : NetworkMode.values()) {
+            if (activeMode == NetworkMode.UNKNOWN || !modes.contains(activeMode)) continue;
+            if (value.length() > 0) value.append(',');
+            value.append(activeMode.name());
+        }
+        preferences.edit().putString(KEY_TILE_ACTIVE_MODES, value.toString()).apply();
     }
 
     public void clearTransientState() {

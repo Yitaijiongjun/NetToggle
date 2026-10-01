@@ -7,17 +7,20 @@ package com.dhangofa.networktoggle;
  * and executes the change using the chosen backend (Root/Shizuku).
  * It also dynamically draws the tile icon to reflect the currently active mode.
  */
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
+import android.view.Window;
+import android.view.WindowManager;
 import rikka.shizuku.Shizuku;
 import android.content.pm.PackageManager;
 
 import com.dhangofa.networktoggle.config.AppPreferences;
-import com.dhangofa.networktoggle.command.CommandExecutor;
-import com.dhangofa.networktoggle.command.CommandExecutorFactory;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -230,12 +233,15 @@ public class NetworkTileService extends TileService {
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
 
+        // Collapse through TileService/SystemUI on the main thread. This follows the
+        // native QS path rather than a privileged shell request, avoiding a temporary
+        // status-bar icon layer reset seen on some OEM SystemUI implementations.
+        collapseQuickSettingsIfEnabled();
+
         // Do not publish a temporary "Switching..." tile state. The tile keeps showing
         // the last confirmed mode until the command succeeds or fails.
-        AppExecutors.executeTelephony(() -> {
-            collapseQuickSettingsIfEnabled(executionMode);
-            applyModeInternal(nextMode, executionMode, false);
-        });
+        AppExecutors.executeTelephony(() ->
+                applyModeInternal(nextMode, executionMode, false));
     }
 
     private void applyModeInternal(NetworkMode targetMode, ExecutionMode executionMode, boolean isAutoRestore) {
@@ -444,14 +450,40 @@ public class NetworkTileService extends TileService {
         updateTileSilently(tile);
     }
 
-    private void collapseQuickSettingsIfEnabled(ExecutionMode executionMode) {
+    private void collapseQuickSettingsIfEnabled() {
         if (!appPreferences.isAutoCollapseQuickSettingsEnabled()) return;
 
         try {
-            CommandExecutor executor = CommandExecutorFactory.forMode(executionMode);
-            if (executor != null) {
-                executor.execute("cmd statusbar collapse");
+            // showDialog() asks SystemUI to collapse Quick Settings through TileService.
+            // Keep the required window invisible and non-interactive so it does not
+            // replace or restyle the normal status bar while the panel is collapsing.
+            Dialog dialog = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+                window.addFlags(
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                window.setDimAmount(0f);
+                window.setWindowAnimations(0);
             }
+
+            showDialog(dialog);
+
+            if (window != null) {
+                window.setLayout(1, 1);
+            }
+
+            mainHandler.postDelayed(() -> {
+                try {
+                    if (dialog.isShowing()) {
+                        dialog.dismiss();
+                    }
+                } catch (Throwable ignored) {
+                    // Service/window may already be detached.
+                }
+            }, 350);
         } catch (Throwable ignored) {
             // Collapsing the shade is optional; never let it block the network switch.
         }

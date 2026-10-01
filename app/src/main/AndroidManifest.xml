@@ -49,6 +49,13 @@
             </intent-filter>
         </receiver>
 
+        <!-- FIClash-style transparent action trampoline for QS tile taps. -->
+        <activity
+            android:name=".TileActionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NetToggle.TransparentAction"
+            android:excludeFromRecents="true" />
+
         <!-- Invisible Activity for App Shortcuts -->
         <activity
             android:name=".ShortcutActionActivity"

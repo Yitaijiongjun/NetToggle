@@ -4,6 +4,9 @@
     <!-- Shizuku permission required for Shizuku API access -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
+    <!-- Granted at runtime through Shizuku for the HyperOS 5G user switch. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
     <!-- Used only to clear stale cached QS tile state after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 

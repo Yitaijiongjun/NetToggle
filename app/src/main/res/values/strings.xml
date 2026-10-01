@@ -96,7 +96,6 @@
     <string name="cycle_prefix">Cycle: </string>
     <string name="tile_active_states">Tile highlight states</string>
     <string name="tile_active_states_description">Checked modes are highlighted; unchecked modes are dimmed.</string>
-    <string name="tile_switching">Switching...</string>
     <string name="tile_shizuku_unavailable">Shizuku Unavailable</string>
     <string name="tile_root_unavailable">Root Unavailable</string>
     <string name="tile_error_check_app">Error Check App</string>

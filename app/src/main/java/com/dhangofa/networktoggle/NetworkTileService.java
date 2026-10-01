@@ -230,9 +230,9 @@ public class NetworkTileService extends TileService {
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
 
-        // Use the transparent Activity only as a SystemUI collapse trigger.
-        // Keep the actual modem/network operation in this TileService, where the
-        // existing Shizuku/Root, SIM resolution and switching state are already stable.
+        // Use a Theme.NoDisplay activity only as a SystemUI collapse trigger.
+        // It creates no visible window and therefore should not cause a second
+        // status-bar appearance transition after Quick Settings has collapsed.
         if (appPreferences.isAutoCollapseQuickSettingsEnabled()) {
             startActivityAndCollapseNative();
         }
@@ -450,9 +450,11 @@ public class NetworkTileService extends TileService {
     @SuppressWarnings("deprecation")
     private void startActivityAndCollapseNative() {
         try {
-            Intent intent = new Intent(this, ShortcutActionActivity.class);
-            intent.putExtra("collapse_only", true);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            Intent intent = new Intent(this, CollapseOnlyActivity.class);
+            intent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 PendingIntent pendingIntent = PendingIntent.getActivity(

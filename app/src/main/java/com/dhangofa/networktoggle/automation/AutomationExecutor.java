@@ -166,7 +166,14 @@ public class AutomationExecutor {
                         sim2Success = true;
                     }
                 } else {
-                    errorMessage = "Failed to change network mode via automation: " + result.getStderr();
+                    String detail = result.getExceptionMessage();
+                    if (detail == null || detail.trim().isEmpty()) {
+                        detail = result.getStderr();
+                    }
+                    if (detail == null || detail.trim().isEmpty()) {
+                        detail = "Unknown backend failure.";
+                    }
+                    errorMessage = "Failed to change network mode via automation: " + detail;
                     Log.e(TAG, errorMessage);
                     saveFailure(prefs, result, errorMessage);
                 }
@@ -197,7 +204,16 @@ public class AutomationExecutor {
 
     private static void saveFailure(AppPreferences prefs, CommandResult result, String context) {
         if (result != null) {
-            prefs.setLastError(result.getCommand(), result.getExitCode(), result.getStdout(), result.getStderr(), context);
+            String exception = result.getExceptionMessage();
+            if (exception == null || exception.trim().isEmpty()) {
+                exception = context;
+            }
+            prefs.setLastError(
+                    result.getCommand(),
+                    result.getExitCode(),
+                    result.getStdout(),
+                    result.getStderr(),
+                    exception);
         } else {
             prefs.setLastError("", -1, "", context, context);
         }

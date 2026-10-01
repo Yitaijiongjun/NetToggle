@@ -17,11 +17,6 @@ public class ShortcutActionActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
-        if (intent != null && intent.getBooleanExtra("collapse_only", false)) {
-            finish();
-            return;
-        }
-
         if (intent != null) {
             String mode = intent.getStringExtra("mode");
             int sim = intent.getIntExtra("sim", -1);

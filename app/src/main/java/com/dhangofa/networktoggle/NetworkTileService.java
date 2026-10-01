@@ -7,6 +7,7 @@ package com.dhangofa.networktoggle;
  * and executes the change using the chosen backend (Root/Shizuku).
  * It also dynamically draws the tile icon to reflect the currently active mode.
  */
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.quicksettings.Tile;
@@ -15,6 +16,8 @@ import rikka.shizuku.Shizuku;
 import android.content.pm.PackageManager;
 
 import com.dhangofa.networktoggle.config.AppPreferences;
+import com.dhangofa.networktoggle.command.CommandExecutor;
+import com.dhangofa.networktoggle.command.CommandExecutorFactory;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -230,6 +233,7 @@ public class NetworkTileService extends TileService {
         // Do not publish a temporary "Switching..." tile state. The tile keeps showing
         // the last confirmed mode until the command succeeds or fails.
         AppExecutors.executeTelephony(() -> {
+            collapseQuickSettingsIfEnabled(executionMode);
             applyModeInternal(nextMode, executionMode, false);
         });
     }
@@ -379,20 +383,20 @@ public class NetworkTileService extends TileService {
                 tile.setState(Tile.STATE_UNAVAILABLE);
                 tile.setLabel(getString(R.string.tile_shizuku_unavailable));
                 tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
-                tile.updateTile();
+                updateTileSilently(tile);
                 return;
             }
         } else if (errorState == AppPreferences.TILE_ERROR_ROOT) {
             tile.setState(Tile.STATE_UNAVAILABLE);
             tile.setLabel(getString(R.string.tile_root_unavailable));
             tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
-            tile.updateTile();
+            updateTileSilently(tile);
             return;
         } else if (errorState == AppPreferences.TILE_ERROR_CMD) {
             tile.setState(Tile.STATE_INACTIVE);
             tile.setLabel(getString(R.string.tile_error_check_app));
             tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
-            tile.updateTile();
+            updateTileSilently(tile);
             return;
         }
 
@@ -437,6 +441,31 @@ public class NetworkTileService extends TileService {
             tile.setIcon(TileIconManager.getCachedIcon(mode.getIconText(), badge, isAuto));
         }
 
+        updateTileSilently(tile);
+    }
+
+    private void collapseQuickSettingsIfEnabled(ExecutionMode executionMode) {
+        if (!appPreferences.isAutoCollapseQuickSettingsEnabled()) return;
+
+        try {
+            CommandExecutor executor = CommandExecutorFactory.forMode(executionMode);
+            if (executor != null) {
+                executor.execute("cmd statusbar collapse");
+            }
+        } catch (Throwable ignored) {
+            // Collapsing the shade is optional; never let it block the network switch.
+        }
+    }
+
+    private void updateTileSilently(Tile tile) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Prevent SystemUI/OEM accessibility feedback such as "PREF 5G, on/off".
+            tile.setStateDescription("\u200B");
+        }
+        CharSequence label = tile.getLabel();
+        if (label != null) {
+            tile.setContentDescription(label);
+        }
         tile.updateTile();
     }
 

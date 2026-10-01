@@ -54,6 +54,8 @@ public final class TileCycleUiController {
     private final View lockBadge;
     private final Switch switchAutoRestore;
     private final View rowAutoRestoreToggle;
+    private final Switch switchAutoCollapse;
+    private final View rowAutoCollapseToggle;
     private boolean updatingUi;
 
     private AppPreferences.NetworkCapabilities currentCaps;
@@ -93,6 +95,8 @@ public final class TileCycleUiController {
         lockBadge = activity.findViewById(R.id.tileCycleLockBadge);
         switchAutoRestore = activity.findViewById(R.id.switchAutoRestore);
         rowAutoRestoreToggle = activity.findViewById(R.id.rowAutoRestoreToggle);
+        switchAutoCollapse = activity.findViewById(R.id.switchAutoCollapse);
+        rowAutoCollapseToggle = activity.findViewById(R.id.rowAutoCollapseToggle);
     }
 
     public void setOnCycleChangedListener(OnCycleChangedListener listener) {
@@ -186,6 +190,21 @@ public final class TileCycleUiController {
                 }
                 if (switchAutoRestore != null) {
                     switchAutoRestore.toggle();
+                }
+            });
+        }
+
+        if (switchAutoCollapse != null) {
+            switchAutoCollapse.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (updatingUi || appPreferences == null) return;
+                appPreferences.setAutoCollapseQuickSettingsEnabled(isChecked);
+            });
+        }
+
+        if (rowAutoCollapseToggle != null) {
+            rowAutoCollapseToggle.setOnClickListener(v -> {
+                if (switchAutoCollapse != null) {
+                    switchAutoCollapse.toggle();
                 }
             });
         }
@@ -381,6 +400,10 @@ public final class TileCycleUiController {
         if (switchAutoRestore != null && appPreferences != null) {
             boolean isChecked = (isAuthorized != null && isAuthorized) && appPreferences.isAutoRestorePreferredModeEnabled();
             switchAutoRestore.setChecked(isChecked);
+        }
+
+        if (switchAutoCollapse != null && appPreferences != null) {
+            switchAutoCollapse.setChecked(appPreferences.isAutoCollapseQuickSettingsEnabled());
         }
 
         updatingUi = false;

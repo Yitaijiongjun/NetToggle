@@ -3,7 +3,6 @@ package com.dhangofa.networktoggle;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Toast;
 
 import com.dhangofa.networktoggle.automation.AutomationExecutor;
 import com.dhangofa.networktoggle.automation.AutomationRequest;
@@ -41,13 +40,6 @@ public class ShortcutActionActivity extends Activity {
                     });
                 }
 
-                String displayMode = mode.replace("_ONLY", " Only").replace("PREF_", "Pref ");
-                String target = "";
-                if (sim == 1) target = " on SIM 1";
-                else if (sim == 2) target = " on SIM 2";
-                else if (sim == 3) target = " on Both SIMs";
-
-                Toast.makeText(getApplicationContext(), getString(R.string.toast_applying) + " " + displayMode + target + "...", Toast.LENGTH_SHORT).show();
             }
         }
 

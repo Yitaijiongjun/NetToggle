@@ -29,6 +29,7 @@ public final class AppPreferences {
     private static final String KEY_TILE_CYCLE_MODES = "tile_cycle_modes";
     private static final String KEY_TILE_ACTIVE_MODES = "tile_active_modes";
     private static final String KEY_AUTO_RESTORE_ENABLED = "auto_restore_enabled";
+    private static final String KEY_AUTO_COLLAPSE_QS = "auto_collapse_quick_settings";
     private static final String KEY_LAST_USER_SELECTED_MODE = "last_user_selected_mode";
 
     private static final String KEY_LAST_ERROR_CMD = "last_error_cmd";
@@ -110,6 +111,14 @@ public final class AppPreferences {
 
     public void setAutoRestorePreferredModeEnabled(boolean enabled) {
         preferences.edit().putBoolean(KEY_AUTO_RESTORE_ENABLED, enabled).apply();
+    }
+
+    public boolean isAutoCollapseQuickSettingsEnabled() {
+        return preferences.getBoolean(KEY_AUTO_COLLAPSE_QS, false);
+    }
+
+    public void setAutoCollapseQuickSettingsEnabled(boolean enabled) {
+        preferences.edit().putBoolean(KEY_AUTO_COLLAPSE_QS, enabled).apply();
     }
 
     public NetworkMode getLastUserSelectedMode() {

@@ -471,4 +471,55 @@
             android:switchMinWidth="52dp" />
     </LinearLayout>
 
+    <!-- Auto-Collapse Quick Settings Toggle Row -->
+    <LinearLayout
+        android:id="@+id/rowAutoCollapseToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="20dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_collapse_quick_settings"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/auto_collapse_quick_settings_description"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:lineSpacingExtra="2dp" />
+        </LinearLayout>
+
+        <Switch
+            android:id="@+id/switchAutoCollapse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:track="@drawable/selector_switch_track_cycle"
+            android:thumb="@drawable/selector_switch_thumb"
+            android:splitTrack="false"
+            android:showText="false"
+            android:thumbTextPadding="0dp"
+            android:switchMinWidth="52dp" />
+    </LinearLayout>
+
 </LinearLayout>

@@ -49,6 +49,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Zero-window trampoline used only to collapse Quick Settings natively. -->
+        <activity
+            android:name=".CollapseOnlyActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
         <!-- Invisible Activity for App Shortcuts -->
         <activity
             android:name=".ShortcutActionActivity"

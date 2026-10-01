@@ -96,7 +96,6 @@
     <string name="cycle_prefix">轮播：</string>
     <string name="tile_active_states">磁贴高亮状态</string>
     <string name="tile_active_states_description">勾选的模式显示为亮，未勾选的模式显示为灭。</string>
-    <string name="tile_switching">切换中...</string>
     <string name="tile_shizuku_unavailable">Shizuku 不可用</string>
     <string name="tile_root_unavailable">Root 不可用</string>
     <string name="tile_error_check_app">错误（请检查应用）</string>

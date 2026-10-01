@@ -30,13 +30,12 @@ public final class NetworkModeController {
             return CommandResult.failed("", "No execution mode selected.");
         }
 
-        // 1. HyperOS/MIUI native user-5G path for Preferred 5G/4G.
-        // It mirrors Xiaomi's own "Enable 5G network" toggle and avoids rewriting
-        // the complete RAT bitmask. If unavailable/failing, fall through to the
-        // existing generic implementation.
+        // 1. Preferred 5G / Preferred 4G are intentionally device-specific in
+        // this build: always use Xiaomi's internal user-5G API and return its
+        // result directly. Never fall back to the full Android RAT bitmask.
         CommandResult xiaomiResult =
                 xiaomiFiveGController.applyIfSupported(networkMode, executionMode);
-        if (xiaomiResult != null && xiaomiResult.isSuccess()) {
+        if (xiaomiResult != null) {
             return xiaomiResult;
         }
 

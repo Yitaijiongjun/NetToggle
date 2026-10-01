@@ -17,14 +17,14 @@ public class ShortcutActionActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
-        boolean tileAction = intent != null && intent.getBooleanExtra("tile_action", false);
-        boolean actionScheduled = false;
+        if (intent != null && intent.getBooleanExtra("collapse_only", false)) {
+            finish();
+            return;
+        }
 
         if (intent != null) {
             String mode = intent.getStringExtra("mode");
             int sim = intent.getIntExtra("sim", -1);
-            boolean updatePreferredMode = intent.getBooleanExtra("update_preferred_mode", false);
-
             if (mode != null) {
                 TargetSim targetSim = TargetSim.AUTO;
                 if (sim == 1) targetSim = TargetSim.SIM_1;
@@ -39,30 +39,16 @@ public class ShortcutActionActivity extends Activity {
                 NetworkMode targetMode = NetworkMode.fromString(mode);
                 if (targetMode != NetworkMode.UNKNOWN) {
                     final TargetSim finalTargetSim = targetSim;
-                    final boolean finalTileAction = tileAction;
-                    final boolean finalUpdatePreferredMode = updatePreferredMode;
-                    actionScheduled = true;
-
                     AppExecutors.executeTelephony(() -> {
-                        try {
-                            AutomationRequest request = new AutomationRequest(
-                                    targetMode,
-                                    finalTargetSim,
-                                    finalUpdatePreferredMode,
-                                    finalTileAction ? "Tile" : "Shortcut");
-                            AutomationExecutor.execute(getApplicationContext(), request);
-                        } finally {
-                            if (finalTileAction) {
-                                NetworkTileService.notifyTileActionFinished();
-                            }
-                        }
+                        AutomationRequest request = new AutomationRequest(
+                                targetMode,
+                                finalTargetSim,
+                                false,
+                                "Shortcut");
+                        AutomationExecutor.execute(getApplicationContext(), request);
                     });
                 }
             }
-        }
-
-        if (tileAction && !actionScheduled) {
-            NetworkTileService.notifyTileActionFinished();
         }
 
         finish();

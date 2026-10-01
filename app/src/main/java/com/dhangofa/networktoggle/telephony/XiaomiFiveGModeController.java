@@ -54,8 +54,8 @@ final class XiaomiFiveGModeController {
                         "miui.telephony.TelephonyManager.getDefault() returned null.");
             }
 
-            Method setter = manager.getClass()
-                    .getDeclaredMethod("setUserFiveGEnabled", boolean.class);
+            Class<?> clazz = Class.forName(MIUI_TELEPHONY_MANAGER);
+            Method setter = clazz.getDeclaredMethod("setUserFiveGEnabled", boolean.class);
             setter.setAccessible(true);
             setter.invoke(manager, enabled);
 
@@ -63,8 +63,7 @@ final class XiaomiFiveGModeController {
             // authoritative. Verify briefly when the getter exists, but do not
             // replace this path with the generic Android RAT-mask API.
             try {
-                Method getter = manager.getClass()
-                        .getDeclaredMethod("isUserFiveGEnabled");
+                Method getter = clazz.getDeclaredMethod("isUserFiveGEnabled");
                 getter.setAccessible(true);
 
                 for (int i = 0; i < 6; i++) {
@@ -101,8 +100,8 @@ final class XiaomiFiveGModeController {
             Object manager = getManager();
             if (manager == null) return null;
 
-            Method getter = manager.getClass()
-                    .getDeclaredMethod("isUserFiveGEnabled");
+            Class<?> clazz = Class.forName(MIUI_TELEPHONY_MANAGER);
+            Method getter = clazz.getDeclaredMethod("isUserFiveGEnabled");
             getter.setAccessible(true);
             Object value = getter.invoke(manager);
             return value instanceof Boolean ? (Boolean) value : null;

@@ -7,6 +7,8 @@ package com.dhangofa.networktoggle;
  * and executes the change using the chosen backend (Root/Shizuku).
  * It also dynamically draws the tile icon to reflect the currently active mode.
  */
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,8 +18,6 @@ import rikka.shizuku.Shizuku;
 import android.content.pm.PackageManager;
 
 import com.dhangofa.networktoggle.config.AppPreferences;
-import com.dhangofa.networktoggle.command.CommandExecutor;
-import com.dhangofa.networktoggle.command.CommandExecutorFactory;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -215,24 +215,28 @@ public class NetworkTileService extends TileService {
     public void onClick() {
         super.onClick();
 
-        if (!IS_SWITCHING.compareAndSet(false, true)) {
-            // Ignore repeated taps while a switch is already in progress.
+        ExecutionMode executionMode = appPreferences.getExecutionMode();
+        if (executionMode == ExecutionMode.NONE) {
+            updateTileUI(NetworkMode.UNKNOWN);
             return;
         }
 
-        ExecutionMode executionMode = appPreferences.getExecutionMode();
-        if (executionMode == ExecutionMode.NONE) {
-            IS_SWITCHING.set(false);
-            updateTileUI(NetworkMode.UNKNOWN);
+        // Match FIClash's lifecycle: when auto-collapse is enabled the tile does
+        // not perform the action itself. It only launches a transparent action
+        // activity through startActivityAndCollapse(); that activity starts the
+        // network operation and immediately finishes.
+        if (appPreferences.isAutoCollapseQuickSettingsEnabled()) {
+            if (IS_SWITCHING.get()) return;
+            startTileActionAndCollapse();
+            return;
+        }
+
+        if (!IS_SWITCHING.compareAndSet(false, true)) {
             return;
         }
 
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
-
-        // Keep the panel open while the privileged network operation runs.
-        // If auto-collapse is enabled, applyModeInternal() injects BACK only
-        // after the switch has completed, so closing SystemUI cannot interrupt it.
         AppExecutors.executeTelephony(() ->
                 applyModeInternal(nextMode, executionMode, false));
     }
@@ -254,7 +258,6 @@ public class NetworkTileService extends TileService {
             SimResolver.SimInfo info2 = simResolver.resolveTargetSimInfo(executionMode, com.dhangofa.networktoggle.model.TargetSim.SIM_2);
 
             if (info1 == null || info2 == null) {
-                collapseQuickSettingsWithBackIfEnabled(executionMode, isAutoRestore);
                 mainHandler.post(() -> {
                     appPreferences.onTargetSimChanged(com.dhangofa.networktoggle.model.TargetSim.AUTO);
                     updateTileUI(appPreferences.getCachedNetworkMode());
@@ -287,7 +290,6 @@ public class NetworkTileService extends TileService {
         } else {
             int slotIndex = simResolver.resolveTargetSlotIndex(executionMode);
             if (!simResolver.isValidSlotIndex(slotIndex)) {
-                collapseQuickSettingsWithBackIfEnabled(executionMode, isAutoRestore);
                 mainHandler.post(() -> {
                     appPreferences.onTargetSimChanged(com.dhangofa.networktoggle.model.TargetSim.AUTO);
                     updateTileUI(appPreferences.getCachedNetworkMode());
@@ -310,7 +312,6 @@ public class NetworkTileService extends TileService {
             appPreferences.setLastNetworkCheckTimestamp(System.currentTimeMillis());
             appPreferences.setAutoSimError(false);
             appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
-            collapseQuickSettingsWithBackIfEnabled(executionMode, isAutoRestore);
             mainHandler.post(() -> {
                 updateTileUI(targetMode);
                 IS_SWITCHING.set(false);
@@ -355,7 +356,6 @@ public class NetworkTileService extends TileService {
                 appPreferences.setLastError(result.getCommand(), result.getExitCode(), result.getStdout(), result.getStderr(), exceptionMsg);
             }
 
-            collapseQuickSettingsWithBackIfEnabled(executionMode, isAutoRestore);
             NetworkMode fallbackMode = appPreferences.getCachedNetworkMode();
             mainHandler.post(() -> {
                 updateTileUI(fallbackMode);
@@ -447,23 +447,25 @@ public class NetworkTileService extends TileService {
         updateTileSilently(tile);
     }
 
-    private void collapseQuickSettingsWithBackIfEnabled(
-            ExecutionMode executionMode,
-            boolean isAutoRestore) {
-        if (isAutoRestore || !appPreferences.isAutoCollapseQuickSettingsEnabled()) {
-            return;
-        }
-
+    @SuppressWarnings("deprecation")
+    private void startTileActionAndCollapse() {
         try {
-            CommandExecutor executor = CommandExecutorFactory.forMode(executionMode);
-            if (executor != null) {
-                // Inject the same navigation action as a physical/software Back press.
-                // This avoids launching an Activity or asking StatusBarManager/SystemUI
-                // to force-collapse the shade through its privileged collapse APIs.
-                executor.execute("input keyevent KEYCODE_BACK");
+            Intent intent = new Intent(this, TileActionActivity.class);
+            intent.setAction(TileActionActivity.ACTION_TOGGLE);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                PendingIntent pendingIntent = PendingIntent.getActivity(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                startActivityAndCollapse(pendingIntent);
+            } else {
+                startActivityAndCollapse(intent);
             }
         } catch (Throwable ignored) {
-            // Auto-collapse is optional; never let it change switch success/failure.
+            // If SystemUI refuses the activity handoff, leave the tile unchanged.
         }
     }
 

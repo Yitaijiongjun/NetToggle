@@ -230,16 +230,13 @@ public class NetworkTileService extends TileService {
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
 
-        // When auto-collapse is enabled, mirror FlClash's proven QS flow:
-        // ask SystemUI to start a transparent action Activity and collapse the shade.
-        // The Activity performs the network change after the native collapse starts.
-        if (appPreferences.isAutoCollapseQuickSettingsEnabled()
-                && startTileActionAndCollapse(nextMode)) {
-            return;
+        // Use the transparent Activity only as a SystemUI collapse trigger.
+        // Keep the actual modem/network operation in this TileService, where the
+        // existing Shizuku/Root, SIM resolution and switching state are already stable.
+        if (appPreferences.isAutoCollapseQuickSettingsEnabled()) {
+            startActivityAndCollapseNative();
         }
 
-        // If auto-collapse is disabled (or the Activity launch failed), keep the
-        // in-service switching path.
         AppExecutors.executeTelephony(() ->
                 applyModeInternal(nextMode, executionMode, false));
     }
@@ -451,23 +448,10 @@ public class NetworkTileService extends TileService {
     }
 
     @SuppressWarnings("deprecation")
-    private boolean startTileActionAndCollapse(NetworkMode targetMode) {
+    private void startActivityAndCollapseNative() {
         try {
             Intent intent = new Intent(this, ShortcutActionActivity.class);
-            intent.putExtra("mode", targetMode.name());
-
-            com.dhangofa.networktoggle.model.TargetSim targetSim = appPreferences.getTargetSim();
-            int sim = -1;
-            if (targetSim == com.dhangofa.networktoggle.model.TargetSim.SIM_1) {
-                sim = 1;
-            } else if (targetSim == com.dhangofa.networktoggle.model.TargetSim.SIM_2) {
-                sim = 2;
-            } else if (targetSim == com.dhangofa.networktoggle.model.TargetSim.BOTH) {
-                sim = 3;
-            }
-            intent.putExtra("sim", sim);
-            intent.putExtra("update_preferred_mode", true);
-            intent.putExtra("tile_action", true);
+            intent.putExtra("collapse_only", true);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -480,14 +464,9 @@ public class NetworkTileService extends TileService {
             } else {
                 startActivityAndCollapse(intent);
             }
-            return true;
         } catch (Throwable ignored) {
-            return false;
+            // Auto-collapse is optional; never let it block the network switch.
         }
-    }
-
-    static void notifyTileActionFinished() {
-        IS_SWITCHING.set(false);
     }
 
     private void updateTileSilently(Tile tile) {

@@ -53,6 +53,6 @@ public final class NetworkModeReader {
 		if (mode == NetworkMode.UNKNOWN) {
 			mode = privilegedModeReader.readCurrentMode(executionMode, targetSim);
 		}
-		return xiaomiFiveGController.refinePreferredRead(mode);
+		return xiaomiFiveGController.refinePreferredRead(mode, executionMode);
 	}
 }

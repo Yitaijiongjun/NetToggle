@@ -9,11 +9,13 @@ import com.dhangofa.networktoggle.model.TargetSim;
 
 public final class NetworkModeReader {
 	private final AppPreferences appPreferences;
+	private final XiaomiFiveGModeController xiaomiFiveGController;
 	private final ShizukuBinderModeReader shizukuBinderReader;
 	private final PrivilegedModeReader privilegedModeReader;
 
 	public NetworkModeReader(Context context, AppPreferences appPreferences, SimResolver simResolver) {
 		this.appPreferences = appPreferences;
+		this.xiaomiFiveGController = new XiaomiFiveGModeController(simResolver);
 		this.shizukuBinderReader = new ShizukuBinderModeReader(simResolver);
 		this.privilegedModeReader = new PrivilegedModeReader(context, simResolver);
 	}
@@ -51,6 +53,6 @@ public final class NetworkModeReader {
 		if (mode == NetworkMode.UNKNOWN) {
 			mode = privilegedModeReader.readCurrentMode(executionMode, targetSim);
 		}
-		return mode;
+		return xiaomiFiveGController.refinePreferredRead(mode);
 	}
 }

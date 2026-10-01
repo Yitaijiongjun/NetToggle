@@ -17,9 +17,13 @@ public class ShortcutActionActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
+        boolean tileAction = intent != null && intent.getBooleanExtra("tile_action", false);
+        boolean actionScheduled = false;
+
         if (intent != null) {
             String mode = intent.getStringExtra("mode");
             int sim = intent.getIntExtra("sim", -1);
+            boolean updatePreferredMode = intent.getBooleanExtra("update_preferred_mode", false);
 
             if (mode != null) {
                 TargetSim targetSim = TargetSim.AUTO;
@@ -27,20 +31,38 @@ public class ShortcutActionActivity extends Activity {
                 else if (sim == 2) targetSim = TargetSim.SIM_2;
                 else if (sim == 3) targetSim = TargetSim.BOTH;
                 else {
-                    com.dhangofa.networktoggle.config.AppPreferences prefs = new com.dhangofa.networktoggle.config.AppPreferences(this);
+                    com.dhangofa.networktoggle.config.AppPreferences prefs =
+                            new com.dhangofa.networktoggle.config.AppPreferences(this);
                     targetSim = prefs.getTargetSim();
                 }
 
                 NetworkMode targetMode = NetworkMode.fromString(mode);
                 if (targetMode != NetworkMode.UNKNOWN) {
                     final TargetSim finalTargetSim = targetSim;
+                    final boolean finalTileAction = tileAction;
+                    final boolean finalUpdatePreferredMode = updatePreferredMode;
+                    actionScheduled = true;
+
                     AppExecutors.executeTelephony(() -> {
-                        AutomationRequest request = new AutomationRequest(targetMode, finalTargetSim, false, "Shortcut");
-                        AutomationExecutor.execute(getApplicationContext(), request);
+                        try {
+                            AutomationRequest request = new AutomationRequest(
+                                    targetMode,
+                                    finalTargetSim,
+                                    finalUpdatePreferredMode,
+                                    finalTileAction ? "Tile" : "Shortcut");
+                            AutomationExecutor.execute(getApplicationContext(), request);
+                        } finally {
+                            if (finalTileAction) {
+                                NetworkTileService.notifyTileActionFinished();
+                            }
+                        }
                     });
                 }
-
             }
+        }
+
+        if (tileAction && !actionScheduled) {
+            NetworkTileService.notifyTileActionFinished();
         }
 
         finish();

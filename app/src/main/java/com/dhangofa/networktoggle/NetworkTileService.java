@@ -7,16 +7,13 @@ package com.dhangofa.networktoggle;
  * and executes the change using the chosen backend (Root/Shizuku).
  * It also dynamically draws the tile icon to reflect the currently active mode.
  */
-import android.app.Dialog;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
-import android.view.Window;
-import android.view.WindowManager;
 import rikka.shizuku.Shizuku;
 import android.content.pm.PackageManager;
 
@@ -233,13 +230,16 @@ public class NetworkTileService extends TileService {
         NetworkMode currentMode = appPreferences.getCachedNetworkMode();
         NetworkMode nextMode = tileCycleManager.getNextMode(currentMode);
 
-        // Collapse through TileService/SystemUI on the main thread. This follows the
-        // native QS path rather than a privileged shell request, avoiding a temporary
-        // status-bar icon layer reset seen on some OEM SystemUI implementations.
-        collapseQuickSettingsIfEnabled();
+        // When auto-collapse is enabled, mirror FlClash's proven QS flow:
+        // ask SystemUI to start a transparent action Activity and collapse the shade.
+        // The Activity performs the network change after the native collapse starts.
+        if (appPreferences.isAutoCollapseQuickSettingsEnabled()
+                && startTileActionAndCollapse(nextMode)) {
+            return;
+        }
 
-        // Do not publish a temporary "Switching..." tile state. The tile keeps showing
-        // the last confirmed mode until the command succeeds or fails.
+        // If auto-collapse is disabled (or the Activity launch failed), keep the
+        // in-service switching path.
         AppExecutors.executeTelephony(() ->
                 applyModeInternal(nextMode, executionMode, false));
     }
@@ -450,43 +450,44 @@ public class NetworkTileService extends TileService {
         updateTileSilently(tile);
     }
 
-    private void collapseQuickSettingsIfEnabled() {
-        if (!appPreferences.isAutoCollapseQuickSettingsEnabled()) return;
-
+    @SuppressWarnings("deprecation")
+    private boolean startTileActionAndCollapse(NetworkMode targetMode) {
         try {
-            // showDialog() asks SystemUI to collapse Quick Settings through TileService.
-            // Keep the required window invisible and non-interactive so it does not
-            // replace or restyle the normal status bar while the panel is collapsing.
-            Dialog dialog = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
-            Window window = dialog.getWindow();
-            if (window != null) {
-                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-                window.addFlags(
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                window.setDimAmount(0f);
-                window.setWindowAnimations(0);
+            Intent intent = new Intent(this, ShortcutActionActivity.class);
+            intent.putExtra("mode", targetMode.name());
+
+            com.dhangofa.networktoggle.model.TargetSim targetSim = appPreferences.getTargetSim();
+            int sim = -1;
+            if (targetSim == com.dhangofa.networktoggle.model.TargetSim.SIM_1) {
+                sim = 1;
+            } else if (targetSim == com.dhangofa.networktoggle.model.TargetSim.SIM_2) {
+                sim = 2;
+            } else if (targetSim == com.dhangofa.networktoggle.model.TargetSim.BOTH) {
+                sim = 3;
             }
+            intent.putExtra("sim", sim);
+            intent.putExtra("update_preferred_mode", true);
+            intent.putExtra("tile_action", true);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
 
-            showDialog(dialog);
-
-            if (window != null) {
-                window.setLayout(1, 1);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                PendingIntent pendingIntent = PendingIntent.getActivity(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                startActivityAndCollapse(pendingIntent);
+            } else {
+                startActivityAndCollapse(intent);
             }
-
-            mainHandler.postDelayed(() -> {
-                try {
-                    if (dialog.isShowing()) {
-                        dialog.dismiss();
-                    }
-                } catch (Throwable ignored) {
-                    // Service/window may already be detached.
-                }
-            }, 350);
+            return true;
         } catch (Throwable ignored) {
-            // Collapsing the shade is optional; never let it block the network switch.
+            return false;
         }
+    }
+
+    static void notifyTileActionFinished() {
+        IS_SWITCHING.set(false);
     }
 
     private void updateTileSilently(Tile tile) {

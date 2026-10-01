@@ -1,105 +1,73 @@
 package com.dhangofa.networktoggle.telephony;
 
 import android.os.Build;
-import android.telephony.SubscriptionManager;
 
-import com.dhangofa.networktoggle.command.CommandExecutor;
-import com.dhangofa.networktoggle.command.CommandExecutorFactory;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
 
 import java.lang.reflect.Method;
-import java.util.Locale;
 
 /**
- * Xiaomi/Redmi/POCO fast path for the normal "5G enabled" preference.
+ * Direct HyperOS/MIUI user-5G backend.
  *
- * HyperOS/MIUI exposes a dedicated user 5G switch through
- * miui.telephony.TelephonyManager. Using that switch is much lighter than
- * rewriting the complete allowed-network-types bitmask, and matches the path
- * used by Xiaomi's own "Enable 5G network" setting.
- *
- * This backend only handles Preferred 5G <-> Preferred 4G on the current
- * default-data subscription. All other modes intentionally fall back to the
- * generic Android telephony implementation.
+ * This build is intentionally device-specific: Preferred 5G / Preferred 4G
+ * always use Xiaomi's internal miui.telephony.TelephonyManager API and never
+ * fall back to rewriting Android's full allowed-network-types bitmask.
  */
 final class XiaomiFiveGModeController {
     private static final String MIUI_TELEPHONY_MANAGER = "miui.telephony.TelephonyManager";
-    private static final String FIVE_G_USER_ENABLE = "fiveg_user_enable";
 
-    private final SimResolver simResolver;
-
-    XiaomiFiveGModeController(SimResolver simResolver) {
-        this.simResolver = simResolver;
+    XiaomiFiveGModeController(SimResolver ignored) {
+        // Kept in the constructor signature so NetworkModeController wiring stays simple.
     }
 
-    /**
-     * @return null when this backend is not applicable; otherwise the Xiaomi-path result.
-     */
     CommandResult applyIfSupported(NetworkMode networkMode, ExecutionMode executionMode) {
-        if (!isXiaomiFamily()) {
-            return null;
-        }
-
         if (networkMode != NetworkMode.PREFERRED_5G
                 && networkMode != NetworkMode.PREFERRED_4G) {
             return null;
         }
 
-        // "Both SIMs" is implemented by temporarily overriding the target twice.
-        // Xiaomi's user-5G preference is device/default-data oriented, so do not
-        // pretend that it is a per-SIM primitive in that case.
-        if (simResolver.getOverrideTargetSim() != null) {
-            return null;
-        }
-
-        SimResolver.SimInfo simInfo = simResolver.resolveTargetSimInfo(executionMode);
-        if (simInfo == null || !simResolver.isValidSubId(simInfo.subId)) {
-            return null;
-        }
-
-        int defaultDataSubId = SubscriptionManager.getDefaultDataSubscriptionId();
-        if (simResolver.isValidSubId(defaultDataSubId) && simInfo.subId != defaultDataSubId) {
-            return null;
-        }
-
         boolean enabled = networkMode == NetworkMode.PREFERRED_5G;
-
-        CommandResult reflected = tryMiuiTelephonyApi(enabled);
-        if (reflected != null && reflected.isSuccess()) {
-            return reflected;
-        }
-
-        return tryPrivilegedSetting(enabled, executionMode);
+        return setUserFiveGEnabled(enabled);
     }
 
-    private CommandResult tryMiuiTelephonyApi(boolean enabled) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions(
-                        "Lmiui/telephony/");
-            }
+    NetworkMode refinePreferredRead(NetworkMode genericMode) {
+        if (genericMode != NetworkMode.PREFERRED_5G
+                && genericMode != NetworkMode.PREFERRED_4G) {
+            return genericMode;
+        }
 
-            Class<?> clazz = Class.forName(MIUI_TELEPHONY_MANAGER);
-            Method getDefault = clazz.getDeclaredMethod("getDefault");
-            getDefault.setAccessible(true);
-            Object manager = getDefault.invoke(null);
+        Boolean enabled = readUserFiveGEnabled();
+        if (enabled == null) {
+            return genericMode;
+        }
+        return enabled ? NetworkMode.PREFERRED_5G : NetworkMode.PREFERRED_4G;
+    }
+
+    private CommandResult setUserFiveGEnabled(boolean enabled) {
+        try {
+            Object manager = getManager();
             if (manager == null) {
-                return CommandResult.failed("MIUI setUserFiveGEnabled",
+                return CommandResult.failed(
+                        "MIUI setUserFiveGEnabled",
                         "miui.telephony.TelephonyManager.getDefault() returned null.");
             }
 
-            Method setter = clazz.getDeclaredMethod("setUserFiveGEnabled", boolean.class);
+            Method setter = manager.getClass()
+                    .getDeclaredMethod("setUserFiveGEnabled", boolean.class);
             setter.setAccessible(true);
             setter.invoke(manager, enabled);
 
-            // Verify when the getter is exposed. Some HyperOS builds update the
-            // backing state asynchronously, so allow a very short settling window.
+            // Match the behavior of dedicated Xiaomi 5G switchers: the setter is
+            // authoritative. Verify briefly when the getter exists, but do not
+            // replace this path with the generic Android RAT-mask API.
             try {
-                Method getter = clazz.getDeclaredMethod("isUserFiveGEnabled");
+                Method getter = manager.getClass()
+                        .getDeclaredMethod("isUserFiveGEnabled");
                 getter.setAccessible(true);
-                for (int i = 0; i < 4; i++) {
+
+                for (int i = 0; i < 6; i++) {
                     Object value = getter.invoke(manager);
                     if (value instanceof Boolean && ((Boolean) value) == enabled) {
                         return CommandResult.completed(
@@ -113,10 +81,8 @@ final class XiaomiFiveGModeController {
 
                 return CommandResult.failed(
                         "MIUI setUserFiveGEnabled",
-                        "MIUI API returned without reaching the requested state.");
+                        "MIUI API did not report the requested state.");
             } catch (NoSuchMethodException ignored) {
-                // Setter completed without throwing; older/newer builds may omit
-                // the public getter while still applying the preference.
                 return CommandResult.completed(
                         "MIUI setUserFiveGEnabled",
                         0,
@@ -124,53 +90,44 @@ final class XiaomiFiveGModeController {
                         "");
             }
         } catch (Throwable throwable) {
-            String message = throwable.getMessage();
-            if (message == null || message.trim().isEmpty()) {
-                message = throwable.getClass().getSimpleName();
-            }
             return CommandResult.failed(
                     "MIUI setUserFiveGEnabled",
-                    message);
+                    describe(throwable));
         }
     }
 
-    private CommandResult tryPrivilegedSetting(boolean enabled, ExecutionMode executionMode) {
-        CommandExecutor executor = CommandExecutorFactory.forMode(executionMode);
-        if (executor == null) {
-            return CommandResult.failed(
-                    "settings put global " + FIVE_G_USER_ENABLE,
-                    "No privileged command executor is available.");
+    private Boolean readUserFiveGEnabled() {
+        try {
+            Object manager = getManager();
+            if (manager == null) return null;
+
+            Method getter = manager.getClass()
+                    .getDeclaredMethod("isUserFiveGEnabled");
+            getter.setAccessible(true);
+            Object value = getter.invoke(manager);
+            return value instanceof Boolean ? (Boolean) value : null;
+        } catch (Throwable ignored) {
+            return null;
         }
-
-        String expected = enabled ? "1" : "0";
-        String command =
-                "settings put global " + FIVE_G_USER_ENABLE + " " + expected
-                        + " && value=$(settings get global " + FIVE_G_USER_ENABLE + ")"
-                        + " && [ \"$value\" = \"" + expected + "\" ]";
-
-        CommandResult result = executor.execute(command);
-        if (result.isSuccess()) {
-            return CommandResult.completed(
-                    command,
-                    0,
-                    "Applied HyperOS fiveg_user_enable=" + expected + ".",
-                    "");
-        }
-
-        return result;
     }
 
-    private static boolean isXiaomiFamily() {
-        String manufacturer = Build.MANUFACTURER == null
-                ? ""
-                : Build.MANUFACTURER.toLowerCase(Locale.ROOT);
-        String brand = Build.BRAND == null
-                ? ""
-                : Build.BRAND.toLowerCase(Locale.ROOT);
+    private Object getManager() throws Exception {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions(
+                    "Lmiui/telephony/");
+        }
 
-        return manufacturer.contains("xiaomi")
-                || brand.contains("xiaomi")
-                || brand.contains("redmi")
-                || brand.contains("poco");
+        Class<?> clazz = Class.forName(MIUI_TELEPHONY_MANAGER);
+        Method getDefault = clazz.getDeclaredMethod("getDefault");
+        getDefault.setAccessible(true);
+        return getDefault.invoke(null);
+    }
+
+    private static String describe(Throwable throwable) {
+        Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
+        String message = cause.getMessage();
+        return message == null || message.trim().isEmpty()
+                ? cause.getClass().getSimpleName()
+                : cause.getClass().getSimpleName() + ": " + message;
     }
 }

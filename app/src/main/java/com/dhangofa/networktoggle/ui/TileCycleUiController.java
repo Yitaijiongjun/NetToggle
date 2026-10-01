@@ -6,6 +6,8 @@ package com.dhangofa.networktoggle.ui;
  */
 
 import android.app.Activity;
+import android.content.ComponentName;
+import android.service.quicksettings.TileService;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -16,6 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dhangofa.networktoggle.R;
+import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -33,6 +36,13 @@ public final class TileCycleUiController {
     private final CheckBox mode5gOnly;
     private final CheckBox mode4gOnly;
     private final CheckBox mode2gOnly;
+
+    private final CheckBox activePref5g;
+    private final CheckBox activePref4g;
+    private final CheckBox activePref3g;
+    private final CheckBox active5gOnly;
+    private final CheckBox active4gOnly;
+    private final CheckBox active2gOnly;
 
     private final View separatorCyclePref1;
     private final View separatorCyclePref2;
@@ -65,6 +75,13 @@ public final class TileCycleUiController {
         mode5gOnly = activity.findViewById(R.id.cycle5gOnly);
         mode4gOnly = activity.findViewById(R.id.cycle4gOnly);
         mode2gOnly = activity.findViewById(R.id.cycle2gOnly);
+
+        activePref5g = activity.findViewById(R.id.activePreferred5g);
+        activePref4g = activity.findViewById(R.id.activePreferred4g);
+        activePref3g = activity.findViewById(R.id.activePreferred3g);
+        active5gOnly = activity.findViewById(R.id.active5gOnly);
+        active4gOnly = activity.findViewById(R.id.active4gOnly);
+        active2gOnly = activity.findViewById(R.id.active2gOnly);
 
         separatorCyclePref1 = activity.findViewById(R.id.separatorCyclePref1);
         separatorCyclePref2 = activity.findViewById(R.id.separatorCyclePref2);
@@ -112,6 +129,19 @@ public final class TileCycleUiController {
                 handleSelection(NetworkMode.FOUR_G_ONLY, selected));
         mode2gOnly.setOnCheckedChangeListener((button, selected) ->
                 handleSelection(NetworkMode.TWO_G_ONLY, selected));
+
+        activePref5g.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.PREFERRED_5G, active));
+        activePref4g.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.PREFERRED_4G, active));
+        activePref3g.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.PREFERRED_3G, active));
+        active5gOnly.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.FIVE_G_ONLY, active));
+        active4gOnly.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.FOUR_G_ONLY, active));
+        active2gOnly.setOnCheckedChangeListener((button, active) ->
+                handleActiveState(NetworkMode.TWO_G_ONLY, active));
 
         if (switchAutoRestore != null) {
             switchAutoRestore.setOnTouchListener((v, event) -> {
@@ -311,6 +341,16 @@ public final class TileCycleUiController {
         refresh();
     }
 
+    private void handleActiveState(NetworkMode mode, boolean active) {
+        if (updatingUi || appPreferences == null) return;
+
+        appPreferences.setTileModeActive(mode, active);
+        TileService.requestListeningState(
+                activity,
+                new ComponentName(activity, NetworkTileService.class)
+        );
+    }
+
     private void refresh() {
         updatingUi = true;
         List<NetworkMode> cycle = cycleManager.getCycle();
@@ -321,6 +361,13 @@ public final class TileCycleUiController {
         mode5gOnly.setChecked(cycle.contains(NetworkMode.FIVE_G_ONLY));
         mode4gOnly.setChecked(cycle.contains(NetworkMode.FOUR_G_ONLY));
         mode2gOnly.setChecked(cycle.contains(NetworkMode.TWO_G_ONLY));
+
+        activePref5g.setChecked(appPreferences.isTileModeActive(NetworkMode.PREFERRED_5G));
+        activePref4g.setChecked(appPreferences.isTileModeActive(NetworkMode.PREFERRED_4G));
+        activePref3g.setChecked(appPreferences.isTileModeActive(NetworkMode.PREFERRED_3G));
+        active5gOnly.setChecked(appPreferences.isTileModeActive(NetworkMode.FIVE_G_ONLY));
+        active4gOnly.setChecked(appPreferences.isTileModeActive(NetworkMode.FOUR_G_ONLY));
+        active2gOnly.setChecked(appPreferences.isTileModeActive(NetworkMode.TWO_G_ONLY));
 
         // Hide separators if either adjacent button is checked to create a seamless pill background
         separatorCyclePref1.setVisibility(modePref5g.isChecked() || modePref4g.isChecked() ? View.INVISIBLE : View.VISIBLE);

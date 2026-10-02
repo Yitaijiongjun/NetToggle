@@ -28,7 +28,7 @@ final class ShizukuBinderModeController {
         this.simResolver = simResolver;
     }
 
-    CommandResult apply(NetworkMode networkMode, ExecutionMode executionMode) {
+    CommandResult apply(NetworkMode networkMode, ExecutionMode executionMode, SimResolver.SimInfo simInfo) {
         if (executionMode != ExecutionMode.SHIZUKU) {
             return CommandResult.failed("", "Invalid execution mode for Shizuku binder.");
         }
@@ -36,8 +36,6 @@ final class ShizukuBinderModeController {
         if (networkMode == null || networkMode == NetworkMode.UNKNOWN) {
             return CommandResult.failed("", "Invalid network mode selected.");
         }
-
-        SimResolver.SimInfo simInfo = simResolver.resolveTargetSimInfo(executionMode);
 
         if (simInfo == null || !simResolver.isValidSlotIndex(simInfo.slotIndex) || !simResolver.isValidSubId(simInfo.subId)) {
             return CommandResult.failed("", "Unable to resolve the target SIM.");
@@ -121,11 +119,9 @@ final class ShizukuBinderModeController {
                 return CommandResult.failed("AIDL: setPreferredNetworkType", "ITelephony returned false.");
             }
             return CommandResult.completed("AIDL: setPreferredNetworkType", 0, "Legacy network mode applied successfully via Shizuku Binder.", "");
-
         } catch (Throwable throwable) {
             return CommandResult.failed("AIDL Binder Call", TelephonyMethodHelper.describe(throwable));
         }
     }
-
 
 }

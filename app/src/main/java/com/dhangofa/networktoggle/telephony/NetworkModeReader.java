@@ -9,11 +9,13 @@ import com.dhangofa.networktoggle.model.TargetSim;
 
 public final class NetworkModeReader {
 	private final AppPreferences appPreferences;
+	private final SimResolver simResolver;
 	private final XiaomiFiveGModeController xiaomiFiveGController;
 	private final ShizukuBinderModeReader shizukuBinderReader;
 
 	public NetworkModeReader(Context context, AppPreferences appPreferences, SimResolver simResolver) {
 		this.appPreferences = appPreferences;
+		this.simResolver = simResolver;
 		this.xiaomiFiveGController = new XiaomiFiveGModeController(simResolver);
 		this.shizukuBinderReader = new ShizukuBinderModeReader(simResolver);
 	}
@@ -45,11 +47,16 @@ public final class NetworkModeReader {
 	}
 
 	NetworkModeReadback readBack(ExecutionMode executionMode, TargetSim targetSim) {
-        NetworkMode mode = shizukuBinderReader.readCurrentMode(executionMode, targetSim);
-        NetworkMode effective = shizukuBinderReader.readEffectiveMode(executionMode, targetSim);
+        return readBack(executionMode, SimIdentityResolver.resolve(simResolver, executionMode, targetSim));
+	}
+
+	NetworkModeReadback readBack(ExecutionMode executionMode, SimResolver.SimInfo info) {
+		if (info == null) return new NetworkModeReadback(NetworkMode.UNKNOWN, NetworkMode.UNKNOWN, null, false);
+        NetworkMode mode = shizukuBinderReader.readCurrentModeForSubId(info.subId);
+        NetworkMode effective = shizukuBinderReader.readEffectiveModeForSubId(info.subId);
 		boolean vendor = xiaomiFiveGController.isSupported();
 		return new NetworkModeReadback(mode, effective,
-				vendor ? xiaomiFiveGController.readEnabled(executionMode, targetSim) : null, vendor);
+				vendor ? xiaomiFiveGController.readEnabled(executionMode, info) : null, vendor);
 	}
 
 	public String describeCurrentState(TargetSim targetSim) {
@@ -61,10 +68,22 @@ public final class NetworkModeReader {
 	public NetworkMode refreshCache() {
 		TargetSim target = appPreferences.getTargetSim();
 		ExecutionMode execution = appPreferences.getExecutionMode();
-		NetworkMode mode = readCurrentMode(target);
+		int autoSlot = -1;
+		NetworkMode mode;
+		if (target == TargetSim.AUTO) {
+			SimResolver.SimInfo info = SimIdentityResolver.resolve(simResolver, execution, target);
+			mode = readBack(execution, info).displayMode();
+			if (info != null) autoSlot = info.slotIndex;
+			if (info != null && (!SimIdentityResolver.stillMatches(simResolver, info)
+					|| android.telephony.SubscriptionManager.getDefaultDataSubscriptionId() != info.subId)) {
+				mode = NetworkMode.UNKNOWN;
+				autoSlot = -1;
+			}
+		} else {
+			mode = readCurrentMode(target);
+		}
 		if (appPreferences.getTargetSim() == target && appPreferences.getExecutionMode() == execution) {
-			appPreferences.setCachedNetworkMode(mode);
-			appPreferences.setLastNetworkCheckTimestamp(System.currentTimeMillis());
+			appPreferences.cacheNetworkState(mode, autoSlot, System.currentTimeMillis());
 		}
 		return mode;
 	}

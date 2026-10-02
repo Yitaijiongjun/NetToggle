@@ -16,6 +16,7 @@ public final class AppPreferences {
     private static final String PREFS_NAME = "NetTogglePrefs";
     private static final String KEY_TARGET_SIM = "target_sim";
     private static final String KEY_NETWORK_STATE = "net_state";
+    private static final String KEY_RESOLVED_AUTO_SLOT = "resolved_auto_slot";
     private static final String KEY_LAST_NETWORK_CHECK = "last_network_check";
     private static final String KEY_AUTO_SIM_ERROR = "auto_sim_error";
     private static final String KEY_TILE_CYCLE_MODES = "tile_cycle_modes";
@@ -87,6 +88,16 @@ public final class AppPreferences {
 
     public void setCachedNetworkMode(NetworkMode mode) {
         preferences.edit().putInt(KEY_NETWORK_STATE, mode.getStateValue()).apply();
+    }
+
+    public int getResolvedAutoSlot() {
+        return preferences.getInt(KEY_RESOLVED_AUTO_SLOT, -1);
+    }
+
+    public void cacheNetworkState(NetworkMode mode, int autoSlot, long checkedAt) {
+        preferences.edit().putInt(KEY_NETWORK_STATE, mode.getStateValue())
+                .putInt(KEY_RESOLVED_AUTO_SLOT, autoSlot)
+                .putLong(KEY_LAST_NETWORK_CHECK, checkedAt).apply();
     }
 
     public void clearCachedNetworkMode() {

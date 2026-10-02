@@ -14,11 +14,11 @@ public final class NetworkModeController {
         shizukuBinderController = new ShizukuBinderModeController(simResolver);
     }
 
-    public CommandResult apply(NetworkMode networkMode, ExecutionMode executionMode) {
+    CommandResult apply(NetworkMode networkMode, ExecutionMode executionMode, SimResolver.SimInfo info) {
         if (executionMode != ExecutionMode.SHIZUKU) return CommandResult.failed("", "Shizuku required");
         if (networkMode == null || networkMode == NetworkMode.UNKNOWN) return CommandResult.failed("", "Invalid network mode");
-        CommandResult vendor = xiaomiFiveGController.applyIfSupported(networkMode, executionMode);
+        CommandResult vendor = xiaomiFiveGController.applyIfSupported(networkMode, executionMode, info);
         if (vendor != null && !vendor.isSuccess()) return vendor;
-        return shizukuBinderController.apply(networkMode, executionMode);
+        return shizukuBinderController.apply(networkMode, executionMode, info);
     }
 }

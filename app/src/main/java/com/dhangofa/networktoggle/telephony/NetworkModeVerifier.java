@@ -13,7 +13,8 @@ final class NetworkModeVerifier {
         NetworkModeReadback state = null;
         int consecutive = 0;
         for (int i = 0; i < attempts; i++) {
-            try { pause.await(); }
+            // Probe immediately. Only wait between readbacks, never before the first one.
+            try { if (i > 0) pause.await(); }
             catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
                 return CommandResult.failed(dispatch.getCommand(), "Network verification interrupted");

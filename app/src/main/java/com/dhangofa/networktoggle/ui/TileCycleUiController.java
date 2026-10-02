@@ -6,8 +6,6 @@ package com.dhangofa.networktoggle.ui;
  */
 
 import android.app.Activity;
-import android.content.ComponentName;
-import android.service.quicksettings.TileService;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -18,7 +16,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dhangofa.networktoggle.R;
-import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -364,10 +361,6 @@ public final class TileCycleUiController {
         if (updatingUi || appPreferences == null) return;
 
         appPreferences.setTileModeActive(mode, active);
-        TileService.requestListeningState(
-                activity,
-                new ComponentName(activity, NetworkTileService.class)
-        );
     }
 
     private void refresh() {

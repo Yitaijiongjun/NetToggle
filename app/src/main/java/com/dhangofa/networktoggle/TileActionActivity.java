@@ -1,7 +1,6 @@
 package com.dhangofa.networktoggle;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.service.quicksettings.TileService;
@@ -49,14 +48,8 @@ public final class TileActionActivity extends Activity {
                         prefs.setTileErrorState(AppPreferences.TILE_ERROR_CMD);
                     } finally {
                         NetworkTileService.IS_SWITCHING.set(false);
-                        TileService.requestListeningState(getApplicationContext(),
-                                new ComponentName(getApplicationContext(), NetworkTileService.class));
                     }
                 });
-            } else {
-                TileService.requestListeningState(
-                        this,
-                        new ComponentName(this, NetworkTileService.class));
             }
         }
 

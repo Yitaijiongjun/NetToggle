@@ -1,15 +1,12 @@
 package com.dhangofa.networktoggle;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.service.quicksettings.TileService;
 import android.widget.ImageView;
 
-import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.R;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
@@ -84,7 +81,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         this.tileCycleUiController = new TileCycleUiController(this, tileCycleManager, this.appPreferences);
         this.modeReader = new NetworkModeReader((Context)this, this.appPreferences, this.simResolver);
         this.permissionManager = new PhoneStatePermissionManager(this, REQ_CODE_PHONE_STATE, this.appPreferences, this::updateCapabilities);
-        
+
         this.executionStateController = new ExecutionStateController(this, this.appPreferences, (text, color) -> {
             if (this.executionModeUiController != null) {
                 this.executionModeUiController.setStatus(text, color);
@@ -159,7 +156,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                 if (!this.activityDestroyed && this.shortcutTabHelper != null) {
                     this.shortcutTabHelper.refreshCapabilities();
                 }
-                TileService.requestListeningState((Context)this, (ComponentName)new ComponentName((Context)this, NetworkTileService.class));
             });
         });
     }
@@ -217,5 +213,4 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     public boolean isExecutionAuthorized() {
         return this.executionModeUiController != null && this.executionModeUiController.isExecutionAuthorized();
     }
-
 }

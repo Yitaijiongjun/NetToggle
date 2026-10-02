@@ -9,6 +9,7 @@ package com.dhangofa.networktoggle;
  */
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.provider.Settings;
 import android.os.Build;
@@ -36,10 +37,22 @@ public class NetworkTileService extends TileService {
             new AtomicBoolean(false);
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private AppPreferences appPreferences;
 
     private boolean listening;
     private final AtomicBoolean refreshQueued = new AtomicBoolean(false);
     private final Runnable refreshRunnable = this::requestStateRefresh;
+    private final Runnable updateCachedTileRunnable = () -> {
+        if (listening) updateTileUI(appPreferences.getCachedNetworkMode());
+    };
+    private final SharedPreferences.OnSharedPreferenceChangeListener cacheListener = (prefs, key) -> {
+        if (listening && ("net_state".equals(key) || "tile_error_state".equals(key)
+                || "resolved_auto_slot".equals(key) || "target_sim".equals(key)
+                || "tile_active_modes".equals(key) || "tile_cycle_modes".equals(key))) {
+            mainHandler.removeCallbacks(updateCachedTileRunnable);
+            mainHandler.post(updateCachedTileRunnable);
+        }
+    };
     private final ContentObserver stateObserver = new ContentObserver(mainHandler) {
         @Override public void onChange(boolean selfChange) {
             mainHandler.removeCallbacks(refreshRunnable);
@@ -47,7 +60,6 @@ public class NetworkTileService extends TileService {
         }
     };
 
-    private AppPreferences appPreferences;
     private NetworkModeReader networkModeReader;
     private TileCycleManager tileCycleManager;
     private com.dhangofa.networktoggle.telephony.SimResolver simResolver;
@@ -120,8 +132,10 @@ public class NetworkTileService extends TileService {
 
     @Override
     public void onDestroy() {
+        listening = false;
         super.onDestroy();
         mainHandler.removeCallbacksAndMessages(null);
+        appPreferences.unregisterListener(cacheListener);
         getContentResolver().unregisterContentObserver(stateObserver);
         try {
             Shizuku.removeBinderReceivedListener(binderReceivedListener);
@@ -133,6 +147,8 @@ public class NetworkTileService extends TileService {
     public void onStopListening() {
         super.onStopListening();
         listening = false;
+        appPreferences.unregisterListener(cacheListener);
+        mainHandler.removeCallbacks(updateCachedTileRunnable);
         getContentResolver().unregisterContentObserver(stateObserver);
         mainHandler.removeCallbacks(refreshRunnable);
         mainHandler.removeCallbacks(shizukuGraceCheckRunnable);
@@ -143,6 +159,7 @@ public class NetworkTileService extends TileService {
         super.onStartListening();
         if (!listening) {
             listening = true;
+            appPreferences.registerListener(cacheListener);
             for (String key : new String[] {"fiveg_user_enable", "dual_nr_enabled", "preferred_network_mode", "multi_sim_data_call"}) {
                 getContentResolver().registerContentObserver(Settings.Global.getUriFor(key), true, stateObserver);
             }
@@ -196,7 +213,7 @@ public class NetworkTileService extends TileService {
                         && IS_SWITCHING.compareAndSet(false, true)) {
                     applyModeInternal(preferredMode, appPreferences.getExecutionMode(), true);
                 }
-                mainHandler.post(() -> updateTileUI(appPreferences.getCachedNetworkMode()));
+                mainHandler.post(updateCachedTileRunnable);
             } finally {
                 refreshQueued.set(false);
             }
@@ -248,7 +265,7 @@ public class NetworkTileService extends TileService {
             networkModeReader.refreshCache();
         } finally {
             IS_SWITCHING.set(false);
-            mainHandler.post(() -> updateTileUI(appPreferences.getCachedNetworkMode()));
+            mainHandler.post(updateCachedTileRunnable);
         }
     }
 
@@ -309,7 +326,7 @@ public class NetworkTileService extends TileService {
             boolean isAuto = targetSim == com.dhangofa.networktoggle.model.TargetSim.AUTO;
 
             if (isAuto) {
-                int activeSlot = simResolver.resolveTargetSlotIndex(appPreferences.getExecutionMode());
+                int activeSlot = appPreferences.getResolvedAutoSlot();
                 if (simResolver.isValidSlotIndex(activeSlot)) {
                     badge = String.valueOf(activeSlot + 1);
                 } else {
@@ -362,5 +379,4 @@ public class NetworkTileService extends TileService {
         }
         tile.updateTile();
     }
-
 }

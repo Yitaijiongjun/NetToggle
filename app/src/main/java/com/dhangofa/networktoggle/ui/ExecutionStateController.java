@@ -3,11 +3,8 @@ package com.dhangofa.networktoggle.ui;
 /** Shizuku Binder lifecycle and authorization state. */
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.pm.PackageManager;
-import android.service.quicksettings.TileService;
 
-import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.R;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.model.ExecutionMode;
@@ -83,7 +80,6 @@ public class ExecutionStateController {
                 statusCallback.onStatusUpdate(activity.getString(R.string.status_shizuku_not_running), 2);
                 if (appPreferences != null) {
                     appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_SHIZUKU);
-                    TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
                 }
                 return;
             }
@@ -93,14 +89,12 @@ public class ExecutionStateController {
                     if (appPreferences.getTileErrorState() == AppPreferences.TILE_ERROR_SHIZUKU) {
                         appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
                     }
-                    TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
                 }
                 return;
             }
             statusCallback.onStatusUpdate(activity.getString(R.string.status_shizuku_not_granted), 2);
             if (appPreferences != null) {
                 appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_SHIZUKU);
-                TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
             }
             if (requestIfNeeded) {
                 statusCallback.onStatusUpdate(activity.getString(R.string.status_shizuku_requesting), 3);
@@ -110,7 +104,6 @@ public class ExecutionStateController {
             statusCallback.onStatusUpdate(activity.getString(R.string.status_shizuku_check_failed), 2);
             if (appPreferences != null) {
                 appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_SHIZUKU);
-                TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
             }
         }
     }

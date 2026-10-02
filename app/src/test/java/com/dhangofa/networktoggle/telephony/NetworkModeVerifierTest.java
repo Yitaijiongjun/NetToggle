@@ -82,4 +82,23 @@ public class NetworkModeVerifierTest {
                 () -> {throw new InterruptedException();}).isSuccess());
         assertTrue(Thread.interrupted());
     }
+
+    @Test public void settledStateIsProbedImmediatelyWithOnlyOneWait() {
+        NetworkModeReadback okay = state(NetworkMode.PREFERRED_5G, NetworkMode.PREFERRED_5G, true);
+        int[] reads = {0};
+        int[] pauses = {0};
+        assertTrue(NetworkModeVerifier.verify(NetworkMode.PREFERRED_5G, DISPATCH,
+                () -> { reads[0]++; return okay; }, 51, () -> pauses[0]++).isSuccess());
+        assertEquals(2, reads[0]);
+        assertEquals(1, pauses[0]);
+    }
+
+    @Test public void fasterPollingRetainsTimeForLateConvergence() {
+        NetworkModeReadback okay = state(NetworkMode.PREFERRED_5G, NetworkMode.PREFERRED_5G, true);
+        NetworkModeReadback pending = state(NetworkMode.PREFERRED_4G, NetworkMode.PREFERRED_4G, false);
+        int[] reads = {0};
+        assertTrue(NetworkModeVerifier.verify(NetworkMode.PREFERRED_5G, DISPATCH,
+                () -> ++reads[0] >= 40 ? okay : pending, 51, () -> {}).isSuccess());
+        assertEquals(41, reads[0]);
+    }
 }

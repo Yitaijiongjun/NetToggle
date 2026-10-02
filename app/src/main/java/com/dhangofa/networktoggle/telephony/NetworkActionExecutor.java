@@ -1,10 +1,7 @@
 package com.dhangofa.networktoggle.telephony;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.service.quicksettings.TileService;
-import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
@@ -39,7 +36,7 @@ public final class NetworkActionExecutor {
             StringBuilder trace = new StringBuilder();
             for (TargetSim single : targets) {
                 resolver.setOverrideTargetSim(single);
-                SimResolver.SimInfo info = resolver.resolveTargetSimInfo(ExecutionMode.SHIZUKU);
+                SimResolver.SimInfo info = SimIdentityResolver.resolve(resolver, ExecutionMode.SHIZUKU, single);
                 CommandResult attempt;
                 if (info == null) {
                     attempt = CommandResult.failed(source, single + " is unavailable");
@@ -48,12 +45,12 @@ public final class NetworkActionExecutor {
                 } else {
                     TargetSim physical = info.slotIndex == 0 ? TargetSim.SIM_1 : TargetSim.SIM_2;
                     resolver.setOverrideTargetSim(physical);
-                    attempt = controller.apply(mode, ExecutionMode.SHIZUKU);
+                    attempt = controller.apply(mode, ExecutionMode.SHIZUKU, info);
                     if (attempt.isSuccess()) {
                         attempt = NetworkModeVerifier.verify(mode, attempt,
-                                () -> resolver.resolveTargetSubId(ExecutionMode.SHIZUKU, physical) == info.subId
-                                        ? reader.readBack(ExecutionMode.SHIZUKU, physical) : null,
-                                16, () -> Thread.sleep(350));
+                                () -> SimIdentityResolver.stillMatches(resolver, info)
+                                        ? reader.readBack(ExecutionMode.SHIZUKU, info) : null,
+                                51, () -> Thread.sleep(100));
                     }
                 }
                 success &= attempt.isSuccess();
@@ -82,7 +79,6 @@ public final class NetworkActionExecutor {
                         result.getStderr(), result.getExceptionMessage());
             }
             new NetworkModeReader(context, prefs, resolver).refreshCache();
-            TileService.requestListeningState(context, new ComponentName(context, NetworkTileService.class));
         }
     }
 

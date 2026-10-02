@@ -3,6 +3,7 @@ package com.dhangofa.networktoggle.telephony;
 import android.os.IBinder;
 import android.os.IInterface;
 import java.lang.reflect.Method;
+import java.util.function.IntSupplier;
 
 /** Uses the ROM's AIDL stub, so transaction numbers match the installed ROM. */
 final class MiuiTelephonyAccess {
@@ -42,23 +43,23 @@ final class MiuiTelephonyAccess {
         throw new IllegalStateException("Cannot find miui.radio.extphone Binder");
     }
 
-    boolean read(int slot, int defaultDataSlot) throws Exception {
+    boolean read(int slot, IntSupplier defaultDataSlot) throws Exception {
         Method getter = TelephonyMethodHelper.find(api, "isUserFiveGEnabled",
                 new Class<?>[] {int.class}, new Class<?>[] {});
         if (getter == null) throw new NoSuchMethodException("isUserFiveGEnabled");
         getter.setAccessible(true);
-        if (getter.getParameterCount() == 0) requireDefaultSlot(slot, defaultDataSlot);
+        if (getter.getParameterCount() == 0) requireDefaultSlot(slot, defaultDataSlot.getAsInt());
         Object value = getter.getParameterCount() == 1 ? getter.invoke(service, slot) : getter.invoke(service);
         if (!(value instanceof Boolean)) throw new IllegalStateException("Invalid Xiaomi 5G readback");
         return (Boolean) value;
     }
 
-    void write(boolean enabled, int slot, int defaultDataSlot) throws Exception {
+    void write(boolean enabled, int slot, IntSupplier defaultDataSlot) throws Exception {
         Method setter = TelephonyMethodHelper.find(api, "setUserFiveGEnabled",
                 new Class<?>[] {boolean.class, int.class}, new Class<?>[] {boolean.class});
         if (setter == null) throw new NoSuchMethodException("setUserFiveGEnabled");
         setter.setAccessible(true);
-        if (setter.getParameterCount() == 1) requireDefaultSlot(slot, defaultDataSlot);
+        if (setter.getParameterCount() == 1) requireDefaultSlot(slot, defaultDataSlot.getAsInt());
         Object result = setter.getParameterCount() == 2
                 ? setter.invoke(service, enabled, slot) : setter.invoke(service, enabled);
         if (Boolean.FALSE.equals(result)) throw new IllegalStateException("Xiaomi setter returned false");

@@ -25,4 +25,4 @@ GitHub Actions 执行 Release 变体的网络回归测试、单页/入口/资源
 
 基于 [Dhangofa/NetToggle](https://github.com/Dhangofa/NetToggle)，遵循 GNU GPL v3，详见 [LICENSE](LICENSE) 与 [NOTICE.md](NOTICE.md)。
 
-切换修复分析见 [docs/HYPEROS_5G_FIX.md](docs/HYPEROS_5G_FIX.md)；裁剪范围见 [docs/SHIZUKU_ONLY.md](docs/SHIZUKU_ONLY.md)。
+切换修复分析见 [docs/HYPEROS_5G_FIX.md](docs/HYPEROS_5G_FIX.md)；裁剪范围见 [docs/SHIZUKU_ONLY.md](docs/SHIZUKU_ONLY.md)；磁贴刷新修复见 [docs/TILE_LATENCY.md](docs/TILE_LATENCY.md)。

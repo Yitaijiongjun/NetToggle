@@ -25,26 +25,24 @@ final class XiaomiFiveGModeController {
         } catch (ClassNotFoundException ignored) { return false; }
     }
 
-    CommandResult applyIfSupported(NetworkMode mode, ExecutionMode executionMode) {
+    CommandResult applyIfSupported(NetworkMode mode, ExecutionMode executionMode, SimResolver.SimInfo info) {
         if (!isSupported()) return null;
-        SimResolver.SimInfo info = simResolver.resolveTargetSimInfo(executionMode);
         if (info == null) return CommandResult.failed("Xiaomi 5G", "Target SIM unavailable");
         boolean enabled = mode == NetworkMode.PREFERRED_5G || mode == NetworkMode.FIVE_G_ONLY;
         String command = "IMiuiTelephony.setUserFiveGEnabled(" + enabled + ", slot=" + info.slotIndex + ")";
         try {
-            getShizukuPhone().write(enabled, info.slotIndex, defaultDataSlot(executionMode));
+            getShizukuPhone().write(enabled, info.slotIndex, () -> defaultDataSlot(executionMode));
             return CommandResult.completed(command, 0, "Vendor Binder setter dispatched", "");
         } catch (Throwable error) {
             return CommandResult.failed(command, TelephonyMethodHelper.describe(error));
         }
     }
 
-    Boolean readEnabled(ExecutionMode executionMode, TargetSim target) {
+    Boolean readEnabled(ExecutionMode executionMode, SimResolver.SimInfo info) {
         if (!isSupported()) return null;
-        SimResolver.SimInfo info = simResolver.resolveTargetSimInfo(executionMode, target);
         if (info == null) return null;
         try {
-            return getShizukuPhone().read(info.slotIndex, defaultDataSlot(executionMode));
+            return getShizukuPhone().read(info.slotIndex, () -> defaultDataSlot(executionMode));
         } catch (Throwable ignored) { return null; }
     }
 
@@ -59,7 +57,8 @@ final class XiaomiFiveGModeController {
     }
 
     private int defaultDataSlot(ExecutionMode mode) {
-        return simResolver.resolveTargetSlotIndex(mode, TargetSim.AUTO);
+        SimResolver.SimInfo info = SimIdentityResolver.resolve(simResolver, mode, TargetSim.AUTO);
+        return info == null ? -1 : info.slotIndex;
     }
 
     private static void exemptHiddenApis() {

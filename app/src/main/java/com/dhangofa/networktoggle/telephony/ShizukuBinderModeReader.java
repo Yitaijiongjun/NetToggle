@@ -26,19 +26,7 @@ final class ShizukuBinderModeReader {
         this.simResolver = simResolver;
     }
 
-    NetworkMode readCurrentMode(ExecutionMode executionMode) {
-        return readCurrentMode(executionMode, null);
-    }
-
-    NetworkMode readCurrentMode(ExecutionMode executionMode, com.dhangofa.networktoggle.model.TargetSim targetSim) {
-        if (executionMode != ExecutionMode.SHIZUKU) {
-            return NetworkMode.UNKNOWN;
-        }
-
-        int subId = targetSim != null
-                ? simResolver.resolveTargetSubId(executionMode, targetSim)
-                : simResolver.resolveTargetSubId(executionMode);
-
+    NetworkMode readCurrentModeForSubId(int subId) {
         if (!simResolver.isValidSubId(subId)) {
             return NetworkMode.UNKNOWN;
         }
@@ -109,15 +97,13 @@ final class ShizukuBinderModeReader {
             return value instanceof Number
                     ? NetworkMode.fromLegacyMode(((Number) value).intValue())
                     : NetworkMode.UNKNOWN;
-
         } catch (Throwable ignored) {
             return NetworkMode.UNKNOWN;
         }
     }
 
-    NetworkMode readEffectiveMode(ExecutionMode executionMode, com.dhangofa.networktoggle.model.TargetSim target) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return readCurrentMode(executionMode, target);
-        int subId = simResolver.resolveTargetSubId(executionMode, target);
+    NetworkMode readEffectiveModeForSubId(int subId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return readCurrentModeForSubId(subId);
         if (!simResolver.isValidSubId(subId)) return NetworkMode.UNKNOWN;
         try {
             org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("Lcom/android/internal/telephony/");

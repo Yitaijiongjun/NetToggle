@@ -10,8 +10,8 @@ android {
         applicationId = "com.dhangofa.networktoggle"
         minSdk = 24
         targetSdk = 37
-        versionCode = 49
-        versionName = "1.2.0-custom15"
+        versionCode = 50
+        versionName = "1.2.0-custom16"
     }
     // Suggested by IzzyOnDroid
     dependenciesInfo {
@@ -30,7 +30,7 @@ android {
             )
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -49,7 +49,7 @@ dependencies {
     // Shizuku API
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
-    
+
     // Aligned with Shizuku's strict version requirement to satisfy Gradle compiler
     compileOnly("androidx.annotation:annotation:1.3.0")
 }

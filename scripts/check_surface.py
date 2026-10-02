@@ -66,4 +66,13 @@ for path in all_xml + [MAIN / 'AndroidManifest.xml']:
     for kind, name in re.findall(r'(?<!android:)@\+?(\w+)/([\w.]+)', text):
         assert (kind, name) in resources, (path.name, kind, name)
 
-print('Surface checks passed: Shizuku-only entry points, one page, shortcuts at bottom, all references resolve.')
+# Rendering a tile must never resolve SIM metadata or run privileged I/O.
+tile_source = (MAIN / 'java/com/dhangofa/networktoggle/NetworkTileService.java').read_text(encoding='utf-8')
+render = tile_source.split('    private void updateTileUI(')[1].split('    @SuppressWarnings')[0]
+assert 'resolveTarget' not in render
+assert 'getResolvedAutoSlot' in render
+assert 'registerListener(cacheListener)' in tile_source
+assert 'unregisterListener(cacheListener)' in tile_source
+assert 'mainHandler.post(updateCachedTileRunnable)' in tile_source
+
+print('Surface checks passed: Shizuku-only, one page, complete resources, cache-driven tile updates without SIM I/O on render.')

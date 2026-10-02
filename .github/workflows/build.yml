@@ -57,6 +57,7 @@ jobs:
           "$BUILD_TOOLS_DIR/zipalign" -p 4 "$APK_DIR/app-release-unsigned.apk" "$APK_DIR/app-release-aligned.apk"
           "$BUILD_TOOLS_DIR/apksigner" sign --ks release.keystore --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD --out "$APK_DIR/NetToggle.apk" "$APK_DIR/app-release-aligned.apk"
           "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$APK_DIR/NetToggle.apk"
+          python3 scripts/check_release_target.py "$APK_DIR/NetToggle.apk"
           sha256sum "$APK_DIR/NetToggle.apk"
 
       - name: Upload Signed Release APK

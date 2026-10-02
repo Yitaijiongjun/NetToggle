@@ -30,11 +30,11 @@ public final class NetworkActionExecutor {
             }
             NetworkModeController controller = new NetworkModeController(resolver);
             NetworkModeReader reader = new NetworkModeReader(context, prefs, resolver);
-            TargetSim[] targets = target == TargetSim.BOTH
-                    ? new TargetSim[] {TargetSim.SIM_1, TargetSim.SIM_2} : new TargetSim[] {target};
+            int targetCount = target == TargetSim.BOTH ? 2 : 1;
             boolean success = true;
             StringBuilder trace = new StringBuilder();
-            for (TargetSim single : targets) {
+            for (int step = 0; step < targetCount; step++) {
+                TargetSim single = targetForStep(target, step);
                 resolver.setOverrideTargetSim(single);
                 SimResolver.SimInfo info = SimIdentityResolver.resolve(resolver, ExecutionMode.SHIZUKU, single);
                 CommandResult attempt;
@@ -80,6 +80,14 @@ public final class NetworkActionExecutor {
             }
             new NetworkModeReader(context, prefs, resolver).refreshCache();
         }
+    }
+
+    static TargetSim targetForStep(TargetSim target, int step) {
+        if (target == null) throw new IllegalArgumentException("Target SIM is missing");
+        int count = target == TargetSim.BOTH ? 2 : 1;
+        if (step < 0 || step >= count) throw new IndexOutOfBoundsException("Invalid SIM step");
+        if (target != TargetSim.BOTH) return target;
+        return step == 0 ? TargetSim.SIM_1 : TargetSim.SIM_2;
     }
 
     private static boolean supportsMode(AppPreferences prefs, int slot, NetworkMode mode) {

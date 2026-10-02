@@ -31,6 +31,7 @@ import com.dhangofa.networktoggle.util.AppExecutors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.dhangofa.networktoggle.ui.TileIconManager;
+import com.dhangofa.networktoggle.ui.TileUpdateGate;
 
 public class NetworkTileService extends TileService {
     static final AtomicBoolean IS_SWITCHING =
@@ -38,6 +39,8 @@ public class NetworkTileService extends TileService {
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private AppPreferences appPreferences;
+    private final TileUpdateGate tileUpdateGate = new TileUpdateGate();
+    private String tileIconKey;
 
     private boolean listening;
     private final AtomicBoolean refreshQueued = new AtomicBoolean(false);
@@ -132,6 +135,7 @@ public class NetworkTileService extends TileService {
 
     @Override
     public void onDestroy() {
+        tileUpdateGate.stopListening();
         listening = false;
         super.onDestroy();
         mainHandler.removeCallbacksAndMessages(null);
@@ -145,6 +149,7 @@ public class NetworkTileService extends TileService {
 
     @Override
     public void onStopListening() {
+        tileUpdateGate.stopListening();
         super.onStopListening();
         listening = false;
         appPreferences.unregisterListener(cacheListener);
@@ -158,6 +163,7 @@ public class NetworkTileService extends TileService {
     public void onStartListening() {
         super.onStartListening();
         if (!listening) {
+            tileUpdateGate.startListening();
             listening = true;
             appPreferences.registerListener(cacheListener);
             for (String key : new String[] {"fiveg_user_enable", "dual_nr_enabled", "preferred_network_mode", "multi_sim_data_call"}) {
@@ -213,7 +219,6 @@ public class NetworkTileService extends TileService {
                         && IS_SWITCHING.compareAndSet(false, true)) {
                     applyModeInternal(preferredMode, appPreferences.getExecutionMode(), true);
                 }
-                mainHandler.post(updateCachedTileRunnable);
             } finally {
                 refreshQueued.set(false);
             }
@@ -265,7 +270,6 @@ public class NetworkTileService extends TileService {
             networkModeReader.refreshCache();
         } finally {
             IS_SWITCHING.set(false);
-            mainHandler.post(updateCachedTileRunnable);
         }
     }
 
@@ -290,14 +294,14 @@ public class NetworkTileService extends TileService {
             } else {
                 tile.setState(Tile.STATE_UNAVAILABLE);
                 tile.setLabel(getString(R.string.tile_shizuku_unavailable));
-                tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
+                setTileIcon(tile, "?", "", false);
                 updateTileSilently(tile);
                 return;
             }
         } else if (errorState == AppPreferences.TILE_ERROR_CMD) {
             tile.setState(Tile.STATE_INACTIVE);
             tile.setLabel(getString(R.string.tile_error_check_app));
-            tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
+            setTileIcon(tile, "?", "", false);
             updateTileSilently(tile);
             return;
         }
@@ -313,7 +317,7 @@ public class NetworkTileService extends TileService {
                 tile.setLabel(getString(R.string.tile_tap_to_set, firstMode.getTileLabel()));
             }
 
-            tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
+            setTileIcon(tile, "?", "", false);
         } else {
             tile.setState(appPreferences.isTileModeActive(mode)
                     ? Tile.STATE_ACTIVE
@@ -340,7 +344,7 @@ public class NetworkTileService extends TileService {
                 badge = "+";
             }
 
-            tile.setIcon(TileIconManager.getCachedIcon(mode.getIconText(), badge, isAuto));
+            setTileIcon(tile, mode.getIconText(), badge, isAuto);
         }
 
         updateTileSilently(tile);
@@ -348,6 +352,8 @@ public class NetworkTileService extends TileService {
 
     @SuppressWarnings("deprecation")
     private void startTileActionAndCollapse() {
+        tileUpdateGate.beginCollapse();
+        mainHandler.removeCallbacks(updateCachedTileRunnable);
         try {
             Intent intent = new Intent(this, TileActionActivity.class);
             intent.setAction(TileActionActivity.ACTION_TOGGLE);
@@ -364,11 +370,19 @@ public class NetworkTileService extends TileService {
                 startActivityAndCollapse(intent);
             }
         } catch (Throwable ignored) {
+            tileUpdateGate.cancelCollapse();
             // If SystemUI refuses the activity handoff, leave the tile unchanged.
         }
     }
 
+    private void setTileIcon(Tile tile, String text, String badge, boolean isAuto) {
+        tileIconKey = text + "_" + badge + "_" + isAuto;
+        tile.setIcon(TileIconManager.getCachedIcon(text, badge, isAuto));
+    }
+
     private void updateTileSilently(Tile tile) {
+        String presentation = tile.getState() + "\n" + tile.getLabel() + "\n" + tileIconKey;
+        if (!tileUpdateGate.accept(presentation)) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Prevent SystemUI/OEM accessibility feedback such as "PREF 5G, on/off".
             tile.setStateDescription("\u200B");

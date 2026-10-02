@@ -74,5 +74,8 @@ assert 'getResolvedAutoSlot' in render
 assert 'registerListener(cacheListener)' in tile_source
 assert 'unregisterListener(cacheListener)' in tile_source
 assert 'mainHandler.post(updateCachedTileRunnable)' in tile_source
+assert tile_source.count('mainHandler.post(updateCachedTileRunnable)') == 1, 'Duplicate explicit/cache tile publishers'
+assert 'tileUpdateGate.beginCollapse()' in tile_source
+assert 'if (!tileUpdateGate.accept(presentation)) return;' in tile_source
 
 print('Surface checks passed: Shizuku-only, one page, complete resources, cache-driven tile updates without SIM I/O on render.')

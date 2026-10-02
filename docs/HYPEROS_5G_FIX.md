@@ -33,3 +33,7 @@ Android separately stores allowed RATs by reason. See [ITelephony.aidl](https://
 Regression tests run in GitHub Actions before release/debug builds. They cover stale USER restrictions, carrier/power blocks, unknown vendor/USER reads, transient matches, interrupted verification, generic devices, Only-mode mismatches and RAT-mask classification.
 
 The user requested GitHub Actions builds only and no phone connection. No claim of Xiaomi 15 Pro radio attachment verification is made. Preferred 5G permits NR; actual attachment still depends on coverage, carrier provisioning and policy. Android's data network type may remain LTE for NSA even when a 5G display indicator is shown. Inspect the live diagnostic fields if the status-bar icon does not change.
+
+## Scope after custom15
+
+The preceding repair notes describe custom14. custom15 removes all Root payloads, external broadcast automation and guide/navigation pages. The Shizuku Binder and verification repair is retained; see [SHIZUKU_ONLY.md](SHIZUKU_ONLY.md).

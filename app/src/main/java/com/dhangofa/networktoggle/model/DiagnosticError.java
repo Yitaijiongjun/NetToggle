@@ -1,7 +1,7 @@
 package com.dhangofa.networktoggle.model;
 
 /**
- * Tracks diagnostic errors (like Shizuku Binder death, or Root permission denied)
+ * Tracks diagnostic errors (like Shizuku Binder death or a failed network action)
  * to display meaningful error banners in the app.
  */
 

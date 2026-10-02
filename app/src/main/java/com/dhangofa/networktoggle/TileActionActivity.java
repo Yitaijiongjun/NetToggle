@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.service.quicksettings.TileService;
 
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
 import com.dhangofa.networktoggle.model.ExecutionMode;
@@ -45,8 +43,7 @@ public final class TileActionActivity extends Activity {
                         NetworkMode currentMode = new NetworkModeReader(getApplicationContext(), prefs,
                                 new SimResolver(getApplicationContext(), prefs)).readCurrentMode(target);
                         NetworkMode nextMode = new TileCycleManager(prefs).getNextMode(currentMode);
-                        AutomationRequest request = new AutomationRequest(nextMode, target, false, "QS Tile", true);
-                        AutomationExecutor.execute(getApplicationContext(), request);
+                        com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(getApplicationContext(), nextMode, target, true, "QS Tile");
                     } catch (Throwable error) {
                         prefs.setLastError("QS Tile", -1, "", "", error.toString());
                         prefs.setTileErrorState(AppPreferences.TILE_ERROR_CMD);

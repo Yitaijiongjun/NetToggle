@@ -1,10 +1,6 @@
 package com.dhangofa.networktoggle.ui;
 
-/**
- * Controller to manage the complex lifecycle of Root shell pings
- * and Shizuku binder callbacks. It keeps the UI status text in sync with the actual
- * execution backend state.
- */
+/** Shizuku Binder lifecycle and authorization state. */
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -23,8 +19,6 @@ public class ExecutionStateController {
     private final AppPreferences appPreferences;
     private final StatusCallback statusCallback;
 
-    private Thread rootCheckThread;
-    private Process rootCheckProcess;
     private boolean isDestroyed = false;
 
     public interface StatusCallback {
@@ -80,57 +74,6 @@ public class ExecutionStateController {
     public void destroy() {
         isDestroyed = true;
         unregisterListeners();
-        if (rootCheckProcess != null) {
-            rootCheckProcess.destroy();
-            rootCheckProcess = null;
-        }
-        if (rootCheckThread != null && rootCheckThread.isAlive()) {
-            rootCheckThread.interrupt();
-            rootCheckThread = null;
-        }
-    }
-
-    public void checkRootPermission() {
-        statusCallback.onStatusUpdate(activity.getString(R.string.status_root_checking), 3);
-        if (rootCheckProcess != null) {
-            rootCheckProcess.destroy();
-            rootCheckProcess = null;
-        }
-        if (rootCheckThread != null && rootCheckThread.isAlive()) {
-            rootCheckThread.interrupt();
-        }
-        rootCheckThread = new Thread(() -> {
-            boolean granted = false;
-            Process process = null;
-            try {
-                process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
-                rootCheckProcess = process;
-                granted = process.waitFor() == 0;
-            } catch (Exception ignored) {
-                granted = false;
-            } finally {
-                if (process != null) process.destroy();
-                if (rootCheckProcess == process) rootCheckProcess = null;
-            }
-
-            boolean finalGranted = granted;
-            activity.runOnUiThread(() -> {
-                if (isDestroyed || appPreferences == null
-                        || appPreferences.getExecutionMode() != ExecutionMode.ROOT) return;
-                if (finalGranted) {
-                    statusCallback.onStatusUpdate(activity.getString(R.string.status_root_authorized), 1);
-                    if (appPreferences.getTileErrorState() == AppPreferences.TILE_ERROR_ROOT) {
-                        appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_NONE);
-                    }
-                } else {
-                    statusCallback.onStatusUpdate(activity.getString(R.string.status_root_denied), 2);
-                    appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_ROOT);
-                    android.widget.Toast.makeText(activity, activity.getString(R.string.toast_root_denied), android.widget.Toast.LENGTH_LONG).show();
-                }
-                TileService.requestListeningState(activity, new ComponentName(activity, NetworkTileService.class));
-            });
-        });
-        rootCheckThread.start();
     }
 
     public void checkShizukuPermission(boolean requestIfNeeded) {

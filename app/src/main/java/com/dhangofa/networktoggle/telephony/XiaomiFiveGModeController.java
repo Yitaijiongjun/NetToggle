@@ -3,8 +3,6 @@ package com.dhangofa.networktoggle.telephony;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.IBinder;
-import com.dhangofa.networktoggle.command.CommandExecutor;
-import com.dhangofa.networktoggle.command.CommandExecutorFactory;
 import com.dhangofa.networktoggle.model.CommandResult;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
@@ -34,7 +32,6 @@ final class XiaomiFiveGModeController {
         boolean enabled = mode == NetworkMode.PREFERRED_5G || mode == NetworkMode.FIVE_G_ONLY;
         String command = "IMiuiTelephony.setUserFiveGEnabled(" + enabled + ", slot=" + info.slotIndex + ")";
         try {
-            if (executionMode == ExecutionMode.ROOT) return runRoot("set", info.slotIndex, enabled);
             getShizukuPhone().write(enabled, info.slotIndex, defaultDataSlot(executionMode));
             return CommandResult.completed(command, 0, "Vendor Binder setter dispatched", "");
         } catch (Throwable error) {
@@ -47,15 +44,6 @@ final class XiaomiFiveGModeController {
         SimResolver.SimInfo info = simResolver.resolveTargetSimInfo(executionMode, target);
         if (info == null) return null;
         try {
-            if (executionMode == ExecutionMode.ROOT) {
-                CommandResult result = runRoot("get", info.slotIndex, false);
-                if (!result.isSuccess()) return null;
-                for (String line : result.getStdout().split("\\n")) {
-                    if ("fiveg=true".equals(line.trim())) return true;
-                    if ("fiveg=false".equals(line.trim())) return false;
-                }
-                return null;
-            }
             return getShizukuPhone().read(info.slotIndex, defaultDataSlot(executionMode));
         } catch (Throwable ignored) { return null; }
     }
@@ -72,15 +60,6 @@ final class XiaomiFiveGModeController {
 
     private int defaultDataSlot(ExecutionMode mode) {
         return simResolver.resolveTargetSlotIndex(mode, TargetSim.AUTO);
-    }
-
-    private CommandResult runRoot(String operation, int slot, boolean enabled) {
-        String apk = simResolver.getContext().getApplicationInfo().sourceDir;
-        String command = "CLASSPATH='" + apk.replace("'", "'\\''")
-                + "' app_process /system/bin " + XiaomiFiveGRootPayload.class.getName()
-                + " " + operation + " " + slot + " " + defaultDataSlot(ExecutionMode.ROOT) + " " + enabled;
-        CommandExecutor executor = CommandExecutorFactory.forMode(ExecutionMode.ROOT);
-        return executor.execute(command);
     }
 
     private static void exemptHiddenApis() {

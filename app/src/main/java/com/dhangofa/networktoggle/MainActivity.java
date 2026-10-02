@@ -7,24 +7,18 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.service.quicksettings.TileService;
-import android.view.MotionEvent;
 import android.widget.ImageView;
-import android.widget.RadioGroup;
 
 import com.dhangofa.networktoggle.NetworkTileService;
 import com.dhangofa.networktoggle.R;
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.cycle.TileCycleManager;
 import com.dhangofa.networktoggle.model.NetworkMode;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.telephony.NetworkCapabilityResolver;
-import com.dhangofa.networktoggle.telephony.NetworkModeController;
 import com.dhangofa.networktoggle.telephony.NetworkModeReader;
 import com.dhangofa.networktoggle.telephony.SimResolver;
-import com.dhangofa.networktoggle.ui.BroadcastTabHelper;
 import com.dhangofa.networktoggle.ui.ExecutionStateController;
 import com.dhangofa.networktoggle.ui.PhoneStatePermissionManager;
 import com.dhangofa.networktoggle.ui.ShortcutTabHelper;
@@ -37,8 +31,7 @@ import java.util.List;
 
 public class MainActivity extends Activity implements SharedPreferences.OnSharedPreferenceChangeListener {
     private com.dhangofa.networktoggle.ui.DiagnosticUiController diagnosticUiController;
-    private com.dhangofa.networktoggle.ui.ExecutionModeUiController executionModeUiController;
-    private com.dhangofa.networktoggle.ui.MainNavigationController navigationController;
+    private com.dhangofa.networktoggle.ui.ShizukuUiController executionModeUiController;
 
     private com.dhangofa.networktoggle.ui.ThemeController themeController;
     private PhoneStatePermissionManager permissionManager;
@@ -49,32 +42,10 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     private volatile boolean activityDestroyed;
     private ExecutionStateController executionStateController;
     private TargetSimUiController targetSimUiController;
-    private BroadcastTabHelper broadcastTabHelper;
     private ShortcutTabHelper shortcutTabHelper;
     private SimResolver simResolver;
-    private NetworkModeController modeController;
     private NetworkModeReader modeReader;
     private TargetSim lastTargetSim = TargetSim.AUTO;
-
-    public int getCurrentTabIndex() {
-        return this.navigationController != null ? this.navigationController.getCurrentTabIndex() : 0;
-    }
-    public com.dhangofa.networktoggle.ui.MainNavigationController getNavigationController() { return this.navigationController; }
-    public ShortcutTabHelper getShortcutTabHelper() { return this.shortcutTabHelper; }
-    public BroadcastTabHelper getBroadcastTabHelper() { return this.broadcastTabHelper; }
-    public com.dhangofa.networktoggle.ui.ThemeController getThemeController() { return this.themeController; }
-
-    @Override
-    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
-        if (this.navigationController != null) {
-            return this.navigationController.dispatchTouchEvent(ev);
-        }
-        return super.dispatchTouchEvent(ev);
-    }
-
-    public boolean superDispatchTouchEvent(MotionEvent ev) {
-        return super.dispatchTouchEvent(ev);
-    }
 
     protected void attachBaseContext(Context newBase) {
         SharedPreferences prefs = newBase.getSharedPreferences("AppPrefs", 0);
@@ -92,13 +63,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     }
 
     protected void onCreate(Bundle savedInstanceState) {
-        int savedTab = 0;
-        int savedAutomationSubTab = -1;
-        if (savedInstanceState != null) {
-            savedTab = savedInstanceState.getInt("savedTab", 0);
-            savedAutomationSubTab = savedInstanceState.getInt("savedAutomationSubTab", -1);
-        }
-        this.navigationController = new com.dhangofa.networktoggle.ui.MainNavigationController(this, savedTab, savedAutomationSubTab);
         SharedPreferences prefs = this.getSharedPreferences("AppPrefs", 0);
         this.themeController = new com.dhangofa.networktoggle.ui.ThemeController(this, prefs);
         super.onCreate(savedInstanceState);
@@ -106,7 +70,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         this.themeController.configureStatusBar();
         this.setContentView(R.layout.activity_main);
         ImageView btnThemeToggle = this.findViewById(R.id.btnThemeToggle);
-        this.themeController.bindViews(btnThemeToggle, this.findViewById(R.id.navIndicatorPill));
+        this.themeController.bindViews(btnThemeToggle);
         this.appPreferences = new AppPreferences((Context)this);
         this.lastTargetSim = this.appPreferences.getTargetSim();
         this.appPreferences.registerListener(this);
@@ -114,12 +78,10 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         this.diagnosticUiController = new com.dhangofa.networktoggle.ui.DiagnosticUiController(this, this.appPreferences);
         this.diagnosticUiController.bindViews();
 
-        com.dhangofa.networktoggle.ui.AppFooterHelper.setupFooter(this);
         this.simResolver = new SimResolver((Context)this, this.appPreferences);
         this.capabilityResolver = new NetworkCapabilityResolver(this.appPreferences, this.simResolver);
         TileCycleManager tileCycleManager = new TileCycleManager(this.appPreferences);
         this.tileCycleUiController = new TileCycleUiController(this, tileCycleManager, this.appPreferences);
-        this.modeController = new NetworkModeController(this.simResolver);
         this.modeReader = new NetworkModeReader((Context)this, this.appPreferences, this.simResolver);
         this.permissionManager = new PhoneStatePermissionManager(this, REQ_CODE_PHONE_STATE, this.appPreferences, this::updateCapabilities);
         
@@ -128,51 +90,29 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                 this.executionModeUiController.setStatus(text, color);
             }
         });
-        this.executionModeUiController = new com.dhangofa.networktoggle.ui.ExecutionModeUiController(this, this.appPreferences, this.executionStateController, this::updateAuthorizationUI);
-        this.executionModeUiController.setOnModeChangeListener(mode -> this.updateCapabilities());
+        this.executionModeUiController = new com.dhangofa.networktoggle.ui.ShizukuUiController(this, this.executionStateController, this::updateAuthorizationUI);
         this.executionModeUiController.bindViews();
 
-        TileCycleSyncController tileCycleSyncController = new TileCycleSyncController((Context)this, this.appPreferences, this.simResolver, this.modeController);
+        TileCycleSyncController tileCycleSyncController = new TileCycleSyncController((Context)this, this.appPreferences, this.simResolver);
         this.tileCycleUiController.setOnCycleChangedListener(tileCycleSyncController);
         this.tileCycleUiController.initialize();
         this.executionStateController.registerListeners();
         this.targetSimUiController = new TargetSimUiController(this, this.appPreferences, this::onTargetSimSelectionChanged);
         this.targetSimUiController.initialize();
-        this.broadcastTabHelper = BroadcastTabHelper.setupTab(this, this.appPreferences);
         this.shortcutTabHelper = ShortcutTabHelper.setupTab(this, this.appPreferences);
-        com.dhangofa.networktoggle.ui.GuidesTabHelper.setupTab(this);
         this.updateAuthorizationUI(isExecutionAuthorized());
-        this.navigationController.initialize();
-        this.navigationController.setupKeyboardListener();
-        this.navigationController.setupOrientationListener();
-    }
-
-    protected void onSaveInstanceState(android.os.Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (this.navigationController != null) {
-            outState.putInt("savedTab", this.navigationController.getCurrentTabIndex());
-        }
-        RadioGroup automationSegmentGroup = (RadioGroup) this.findViewById(R.id.automationSegmentGroup);
-        if (automationSegmentGroup != null) {
-            outState.putInt("savedAutomationSubTab", automationSegmentGroup.getCheckedRadioButtonId());
-        }
     }
 
     protected void onResume() {
         super.onResume();
-        if (this.modeReader != null && this.appPreferences.getExecutionMode() != ExecutionMode.NONE) {
-            AppExecutors.executeTelephony(() -> this.modeReader.refreshCache());
-        }
         if (this.targetSimUiController != null) {
             this.targetSimUiController.updateAutoSimWarning();
         }
         if (this.permissionManager != null) {
             this.permissionManager.checkAndRequest();
         }
+        this.executionStateController.checkShizukuPermission(false);
         this.updateAuthorizationUI(isExecutionAuthorized());
-        if (this.broadcastTabHelper != null) {
-            this.broadcastTabHelper.refreshCapabilities();
-        }
         if (this.shortcutTabHelper != null) {
             this.shortcutTabHelper.refreshCapabilities();
         }
@@ -199,14 +139,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                     List<NetworkMode> cycle = tileCycleManager.getCycle();
                     NetworkMode modeToApply = cycle.contains((Object)mode1) ? mode1 : (cycle.contains((Object)mode2) ? mode2 : cycle.get(0));
 
-                    AutomationRequest request = new AutomationRequest(
-                            modeToApply,
-                            TargetSim.BOTH,
-                            false,
-                            "TargetSimSync",
-                            false
-                    );
-                    AutomationExecutor.execute(getApplicationContext(), request);
+                    com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(getApplicationContext(), modeToApply, TargetSim.BOTH, false, "TargetSimSync");
                 }
                 this.updateCapabilities();
             });
@@ -222,9 +155,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             this.runOnUiThread(() -> {
                 if (!this.activityDestroyed && this.tileCycleUiController != null) {
                     this.tileCycleUiController.applyCapabilities(caps);
-                }
-                if (!this.activityDestroyed && this.broadcastTabHelper != null) {
-                    this.broadcastTabHelper.refreshCapabilities();
                 }
                 if (!this.activityDestroyed && this.shortcutTabHelper != null) {
                     this.shortcutTabHelper.refreshCapabilities();
@@ -243,9 +173,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
 
     protected void onDestroy() {
         this.activityDestroyed = true;
-        if (this.navigationController != null) {
-            this.navigationController.destroy();
-        }
         if (this.appPreferences != null) {
             this.appPreferences.unregisterListener(this);
         }
@@ -276,9 +203,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         }
         if (this.targetSimUiController != null) {
             this.targetSimUiController.setAuthorized(authorized);
-        }
-        if (this.broadcastTabHelper != null) {
-            this.broadcastTabHelper.setAuthorized(authorized);
         }
         if (this.shortcutTabHelper != null) {
             this.shortcutTabHelper.setAuthorized(authorized);

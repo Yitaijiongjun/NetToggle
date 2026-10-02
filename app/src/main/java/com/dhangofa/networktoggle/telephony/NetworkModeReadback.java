@@ -42,6 +42,16 @@ final class NetworkModeReadback {
         return effectiveMode == userMode ? userMode : effectiveMode;
     }
 
+    public static NetworkMode fromAllowedMask(long mask) {
+        if (mask <= 0) return NetworkMode.UNKNOWN;
+        long nr = 1L << 19;
+        long lte = (1L << 12) | (1L << 18); // LTE and LTE_CA
+        long gsm = (1L << 0) | (1L << 1) | (1L << 15); // GPRS, EDGE, GSM
+        if ((mask & nr) != 0) return (mask & ~nr) == 0 ? NetworkMode.FIVE_G_ONLY : NetworkMode.PREFERRED_5G;
+        if ((mask & lte) != 0) return (mask & ~lte) == 0 ? NetworkMode.FOUR_G_ONLY : NetworkMode.PREFERRED_4G;
+        return (mask & ~gsm) == 0 ? NetworkMode.TWO_G_ONLY : NetworkMode.PREFERRED_3G;
+    }
+
     @Override public String toString() {
         return "USER=" + userMode + ", effective=" + effectiveMode + ", Xiaomi5G=" + vendorEnabled;
     }

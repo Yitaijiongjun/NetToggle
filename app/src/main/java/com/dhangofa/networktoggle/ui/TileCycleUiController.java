@@ -321,7 +321,7 @@ public final class TileCycleUiController {
         if (updatingUi) return;
 
         if (!isAuthorized) {
-            showToast("Please authorize Root or Shizuku to configure toggles.");
+            showToast(activity.getString(R.string.toast_auth_required));
             refresh(); // Revert checkbox visual change
             return;
         }

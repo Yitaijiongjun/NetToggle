@@ -59,6 +59,9 @@ jobs:
       - name: Run Telephony Regression Tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Validate Shizuku-only App Surface
+        run: python3 scripts/check_surface.py
+
       - name: Upload Regression Test Results
         if: always()
         uses: actions/upload-artifact@v6

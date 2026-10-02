@@ -5,11 +5,8 @@ import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.NetworkMode;
 import com.dhangofa.networktoggle.model.TargetSim;
-import com.dhangofa.networktoggle.telephony.NetworkModeController;
 import com.dhangofa.networktoggle.telephony.NetworkModeReader;
 import com.dhangofa.networktoggle.telephony.SimResolver;
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.util.AppExecutors;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +17,7 @@ public final class TileCycleSyncController implements TileCycleUiController.OnCy
     private final AppPreferences prefs;
     private final SimResolver simResolver;
 
-    public TileCycleSyncController(Context context, AppPreferences prefs, SimResolver simResolver, NetworkModeController controller) {
+    public TileCycleSyncController(Context context, AppPreferences prefs, SimResolver simResolver) {
         this.context = context.getApplicationContext();
         this.prefs = prefs;
         this.simResolver = simResolver;
@@ -33,7 +30,7 @@ public final class TileCycleSyncController implements TileCycleUiController.OnCy
             if (cycle.isEmpty() || prefs.getExecutionMode() == ExecutionMode.NONE || prefs.getTargetSim() != target) return;
             NetworkMode mode = new NetworkModeReader(context, prefs, simResolver).refreshCache();
             if (mode != NetworkMode.UNKNOWN && !cycle.contains(mode)) {
-                AutomationExecutor.execute(context, new AutomationRequest(cycle.get(0), target, false, "TileCycle Sync", false));
+                com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(context, cycle.get(0), target, false, "TileCycle Sync");
             }
         });
     }

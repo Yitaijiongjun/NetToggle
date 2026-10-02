@@ -88,7 +88,7 @@ final class ShizukuBinderModeReader {
                 }
 
                 long bitmask = ((Number) value).longValue();
-                return NetworkMode.fromAllowedMask(bitmask);
+                return NetworkModeReadback.fromAllowedMask(bitmask);
             }
 
             Method method = TelephonyMethodHelper.find(
@@ -128,7 +128,7 @@ final class ShizukuBinderModeReader {
             Method method = TelephonyMethodHelper.find(api, "getAllowedNetworkTypesBitmask", new Class<?>[] {int.class});
             if (method == null) return NetworkMode.UNKNOWN;
             Object mask = method.invoke(phone, subId);
-            return mask instanceof Number ? NetworkMode.fromAllowedMask(((Number) mask).longValue()) : NetworkMode.UNKNOWN;
+            return mask instanceof Number ? NetworkModeReadback.fromAllowedMask(((Number) mask).longValue()) : NetworkMode.UNKNOWN;
         } catch (Throwable ignored) { return NetworkMode.UNKNOWN; }
     }
 

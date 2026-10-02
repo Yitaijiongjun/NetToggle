@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:layout_marginBottom="0dp" android:background="@drawable/shape_exec_card_bg" android:elevation="6dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/shizuku" android:textStyle="bold" android:textSize="18sp" android:textColor="@color/text_primary" />
+    <TextView android:id="@+id/shizukuStatusText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:padding="10dp" android:text="@string/status_shizuku_not_running" android:textSize="13sp" android:textColor="@color/text_secondary" />
+    <Button android:id="@+id/btnSetupAuthorize" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:minHeight="48dp" android:text="@string/btn_authorize_shizuku" android:backgroundTint="@color/brand_primary_container" android:textColor="@color/brand_on_primary_container" />
+</LinearLayout>

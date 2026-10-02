@@ -11,13 +11,11 @@ public final class NetworkModeReader {
 	private final AppPreferences appPreferences;
 	private final XiaomiFiveGModeController xiaomiFiveGController;
 	private final ShizukuBinderModeReader shizukuBinderReader;
-	private final PrivilegedModeReader privilegedModeReader;
 
 	public NetworkModeReader(Context context, AppPreferences appPreferences, SimResolver simResolver) {
 		this.appPreferences = appPreferences;
 		this.xiaomiFiveGController = new XiaomiFiveGModeController(simResolver);
 		this.shizukuBinderReader = new ShizukuBinderModeReader(simResolver);
-		this.privilegedModeReader = new PrivilegedModeReader(context, simResolver);
 	}
 
 	public NetworkMode readCurrentMode() {
@@ -47,19 +45,8 @@ public final class NetworkModeReader {
 	}
 
 	NetworkModeReadback readBack(ExecutionMode executionMode, TargetSim targetSim) {
-		NetworkMode mode = NetworkMode.UNKNOWN;
-		// 1. Shizuku Fast-Path (Binder IPC)
-		if (executionMode == ExecutionMode.SHIZUKU) {
-			mode = shizukuBinderReader.readCurrentMode(executionMode, targetSim);
-		}
-
-		// 2. Root/Shizuku privileged shell fallback path
-		if (mode == NetworkMode.UNKNOWN) {
-			mode = privilegedModeReader.readCurrentMode(executionMode, targetSim);
-		}
-		NetworkMode effective = executionMode == ExecutionMode.SHIZUKU
-				? shizukuBinderReader.readEffectiveMode(executionMode, targetSim)
-				: privilegedModeReader.readEffectiveMode(executionMode, targetSim);
+        NetworkMode mode = shizukuBinderReader.readCurrentMode(executionMode, targetSim);
+        NetworkMode effective = shizukuBinderReader.readEffectiveMode(executionMode, targetSim);
 		boolean vendor = xiaomiFiveGController.isSupported();
 		return new NetworkModeReadback(mode, effective,
 				vendor ? xiaomiFiveGController.readEnabled(executionMode, targetSim) : null, vendor);

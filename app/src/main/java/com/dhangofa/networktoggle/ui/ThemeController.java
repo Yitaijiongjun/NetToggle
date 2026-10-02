@@ -3,8 +3,6 @@ package com.dhangofa.networktoggle.ui;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
-import android.graphics.drawable.GradientDrawable;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
@@ -16,7 +14,6 @@ public class ThemeController {
     private final SharedPreferences prefs;
     private int currentThemeMode = -1;
     private ImageView btnThemeToggle;
-    private View navIndicatorPill;
 
     public ThemeController(Activity activity, SharedPreferences prefs) {
         this.activity = activity;
@@ -33,9 +30,8 @@ public class ThemeController {
         return currentThemeMode == 3;
     }
 
-    public void bindViews(ImageView btnThemeToggle, View navIndicatorPill) {
+    public void bindViews(ImageView btnThemeToggle) {
         this.btnThemeToggle = btnThemeToggle;
-        this.navIndicatorPill = navIndicatorPill;
         if (this.btnThemeToggle != null) {
             this.btnThemeToggle.setOnClickListener(v -> cycleThemeMode());
         }
@@ -85,22 +81,6 @@ public class ThemeController {
     }
 
     public void applyThemeOverrides() {
-        View btnAdd = activity.findViewById(R.id.btnAddShortcut);
-        if (btnAdd != null) {
-            btnAdd.setBackgroundResource(currentThemeMode == 3 ? R.drawable.shape_fab_wavy_amoled : R.drawable.shape_fab_wavy);
-            btnAdd.setOutlineProvider(new android.view.ViewOutlineProvider() {
-                @Override
-                public void getOutline(android.view.View view, android.graphics.Outline outline) {
-                    int insetX = view.getWidth() / 8;
-                    int insetY = view.getHeight() / 8;
-                    outline.setOval(insetX, insetY, view.getWidth() - insetX, view.getHeight() - insetY);
-                }
-            });
-        }
-        ImageView iconAdd = activity.findViewById(R.id.iconAddShortcut);
-        if (iconAdd != null && currentThemeMode == 3) {
-            iconAdd.setImageTintList(ColorStateList.valueOf(activity.getColor(R.color.fab_add_shortcut_icon_amoled)));
-        }
         if (currentThemeMode == 3) {
             int black = -16777216;
             View root = activity.findViewById(R.id.mainRoot);
@@ -112,23 +92,6 @@ public class ThemeController {
                 window.setNavigationBarColor(black);
             }
             
-            View bottomNavPill = activity.findViewById(R.id.bottomNavPill);
-            if (bottomNavPill != null && bottomNavPill.getBackground() instanceof GradientDrawable) {
-                GradientDrawable gd = (GradientDrawable) bottomNavPill.getBackground().mutate();
-                gd.setColor(black);
-                gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.0f, activity.getResources().getDisplayMetrics()), activity.getColor(R.color.nav_pill_stroke_amoled));
-            }
-            View edgeBarContainer = activity.findViewById(R.id.edgeBarContainer);
-            if (edgeBarContainer != null && edgeBarContainer.getBackground() instanceof GradientDrawable) {
-                GradientDrawable gd = (GradientDrawable) edgeBarContainer.getBackground().mutate();
-                gd.setColor(black);
-                gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.0f, activity.getResources().getDisplayMetrics()), activity.getColor(R.color.nav_pill_stroke_amoled));
-            }
-            
-            if (navIndicatorPill != null && navIndicatorPill.getBackground() instanceof GradientDrawable) {
-                ((GradientDrawable) navIndicatorPill.getBackground().mutate())
-                    .setColor(activity.getColor(R.color.nav_item_selected_bg_amoled));
-            }
         }
     }
 }

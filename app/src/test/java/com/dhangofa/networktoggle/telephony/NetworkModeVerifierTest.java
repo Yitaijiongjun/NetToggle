@@ -65,15 +65,15 @@ public class NetworkModeVerifierTest {
     }
 
     @Test public void decodeMasksHandlesCarrierSubsetsAndLteCa() {
-        assertEquals(NetworkMode.UNKNOWN, NetworkMode.fromAllowedMask(0));
-        assertEquals(NetworkMode.UNKNOWN, NetworkMode.fromAllowedMask(-1));
-        assertEquals(NetworkMode.TWO_G_ONLY, NetworkMode.fromAllowedMask(3));
-        assertEquals(NetworkMode.PREFERRED_4G, NetworkMode.fromAllowedMask((1L << 12) | (1L << 2)));
-        assertEquals(NetworkMode.FOUR_G_ONLY, NetworkMode.fromAllowedMask((1L << 12) | (1L << 18)));
-        assertEquals(NetworkMode.FIVE_G_ONLY, NetworkMode.fromAllowedMask(1L << 19));
-        assertEquals(NetworkMode.PREFERRED_5G, NetworkMode.fromAllowedMask((1L << 19) | (1L << 2)));
+        assertEquals(NetworkMode.UNKNOWN, NetworkModeReadback.fromAllowedMask(0));
+        assertEquals(NetworkMode.UNKNOWN, NetworkModeReadback.fromAllowedMask(-1));
+        assertEquals(NetworkMode.TWO_G_ONLY, NetworkModeReadback.fromAllowedMask(3));
+        assertEquals(NetworkMode.PREFERRED_4G, NetworkModeReadback.fromAllowedMask((1L << 12) | (1L << 2)));
+        assertEquals(NetworkMode.FOUR_G_ONLY, NetworkModeReadback.fromAllowedMask((1L << 12) | (1L << 18)));
+        assertEquals(NetworkMode.FIVE_G_ONLY, NetworkModeReadback.fromAllowedMask(1L << 19));
+        assertEquals(NetworkMode.PREFERRED_5G, NetworkModeReadback.fromAllowedMask((1L << 19) | (1L << 2)));
         for (NetworkMode mode : NetworkMode.values()) {
-            if (mode.getBinaryMask() != null) assertEquals(mode, NetworkMode.fromAllowedMask(Long.parseLong(mode.getBinaryMask(), 2)));
+            if (mode.getBinaryMask() != null) assertEquals(mode, NetworkModeReadback.fromAllowedMask(Long.parseLong(mode.getBinaryMask(), 2)));
         }
     }
 

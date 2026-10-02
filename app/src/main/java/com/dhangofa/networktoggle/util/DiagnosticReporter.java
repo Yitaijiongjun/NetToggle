@@ -10,12 +10,9 @@ import com.dhangofa.networktoggle.model.ExecutionMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.telephony.SimResolver;
 import com.dhangofa.networktoggle.telephony.NetworkModeReader;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import rikka.shizuku.Shizuku;
 
 public class DiagnosticReporter {
@@ -64,43 +61,7 @@ public class DiagnosticReporter {
         }
 
         ExecutionMode selectedMode = prefs.getExecutionMode();
-        if (selectedMode == ExecutionMode.ROOT) {
-            sb.append("[ROOT STATUS]\n");
-            Process process = null;
-            try {
-                process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
-                int exitCode = -1;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    boolean finished = process.waitFor(2, TimeUnit.SECONDS);
-                    if (finished) {
-                        exitCode = process.exitValue();
-                    } else {
-                        process.destroy();
-                    }
-                } else {
-                    exitCode = process.waitFor();
-                }
-                boolean granted = (exitCode == 0);
-                sb.append("Root Access: ").append(granted ? "Granted" : "Denied/Unavailable").append("\n");
-                if (granted) {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                        String line = reader.readLine();
-                        if (line != null && !line.trim().isEmpty()) {
-                            sb.append("Identity: ").append(line.trim()).append("\n");
-                        }
-                    }
-                } else {
-                    sb.append("Exit Code: ").append(exitCode).append("\n");
-                }
-            } catch (Throwable e) {
-                sb.append("Root Access: Unavailable (").append(e.getClass().getSimpleName()).append(")\n");
-            } finally {
-                if (process != null) {
-                    process.destroy();
-                }
-            }
-            sb.append("\n");
-        } else if (selectedMode == ExecutionMode.SHIZUKU) {
+        if (selectedMode == ExecutionMode.SHIZUKU) {
             sb.append("[SHIZUKU STATUS]\n");
             try {
                 boolean isBinderAlive = Shizuku.pingBinder();

@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.model.NetworkMode;
 import com.dhangofa.networktoggle.model.TargetSim;
 import com.dhangofa.networktoggle.util.AppExecutors;
@@ -35,12 +33,7 @@ public class ShortcutActionActivity extends Activity {
                 if (targetMode != NetworkMode.UNKNOWN) {
                     final TargetSim finalTargetSim = targetSim;
                     AppExecutors.executeTelephony(() -> {
-                        AutomationRequest request = new AutomationRequest(
-                                targetMode,
-                                finalTargetSim,
-                                false,
-                                "Shortcut");
-                        AutomationExecutor.execute(getApplicationContext(), request);
+                        com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(getApplicationContext(), targetMode, finalTargetSim, true, "Shortcut");
                     });
                 }
             }

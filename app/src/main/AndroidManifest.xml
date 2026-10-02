@@ -39,16 +39,6 @@
             android:exported="true"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
-        <!-- Automation Receiver for Tasker/Macrodroid -->
-        <receiver
-            android:name=".AutomationReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.dhangofa.networktoggle.SET_MODE" />
-            </intent-filter>
-        </receiver>
-
         <!-- FIClash-style transparent action trampoline for QS tile taps. -->
         <activity
             android:name=".TileActionActivity"

@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
-import android.content.res.Configuration;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Handler;
@@ -31,8 +30,6 @@ import android.widget.Toast;
 import com.dhangofa.networktoggle.MainActivity;
 import com.dhangofa.networktoggle.R;
 import com.dhangofa.networktoggle.ShortcutActionActivity;
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import com.dhangofa.networktoggle.config.AppPreferences;
 import com.dhangofa.networktoggle.model.NetworkMode;
 import com.dhangofa.networktoggle.model.TargetSim;
@@ -53,7 +50,6 @@ public class ShortcutTabHelper {
     private boolean isAuthorized = false;
     private boolean isRestoringState = false;
     private String lastSyncedSignature = null;
-    private boolean isKeyboardOpen = false;
     private final Handler titleDebounceHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingTitleSync = null;
     private Runnable syncShortcutsRunnable = null;
@@ -272,7 +268,7 @@ public class ShortcutTabHelper {
             if (bannerLimitReached != null) {
                 bannerLimitReached.setVisibility(count >= 4 ? View.VISIBLE : View.GONE);
             }
-            updateFabVisibility();
+            updateAddButtonVisibility();
 
             StringBuilder sigBuilder = new StringBuilder();
             for (int i = 0; i < count; i++) {
@@ -501,8 +497,7 @@ public class ShortcutTabHelper {
                 if (networkMode != NetworkMode.UNKNOWN) {
                     final TargetSim finalTargetSim = targetSim;
                     AppExecutors.executeTelephony(() -> {
-                        AutomationRequest request = new AutomationRequest(networkMode, finalTargetSim, false, "ShortcutTest");
-                        AutomationExecutor.execute(activity.getApplicationContext(), request);
+                        com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(activity.getApplicationContext(), networkMode, finalTargetSim, true, "ShortcutTest");
                     });
                 }
 
@@ -617,42 +612,9 @@ public class ShortcutTabHelper {
         syncShortcuts.run();
     }
 
-    public void setKeyboardOpen(boolean open) {
-        this.isKeyboardOpen = open;
-        this.updateFabVisibility();
-    }
-
-    public boolean isShortcutTabActive() {
-        boolean isAutoTabVisible;
-        if (activity instanceof MainActivity) {
-            isAutoTabVisible = ((MainActivity) activity).getCurrentTabIndex() == 1;
-        } else {
-            View tabAutomation = activity.findViewById(R.id.tabAutomation);
-            isAutoTabVisible = tabAutomation != null && tabAutomation.getVisibility() == View.VISIBLE;
-        }
-        View pageShortcuts = activity.findViewById(R.id.pageShortcuts);
-        return isAutoTabVisible && pageShortcuts != null && pageShortcuts.getVisibility() == View.VISIBLE;
-    }
-
-    public void updateFabVisibility() {
+    public void updateAddButtonVisibility() {
         View btnAdd = activity.findViewById(R.id.btnAddShortcut);
-        if (btnAdd == null) return;
-        View bottomNavPill = activity.findViewById(R.id.bottomNavPill);
-        boolean isLandscape = activity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
-        boolean navReady = isLandscape || (bottomNavPill != null && bottomNavPill.getVisibility() == View.VISIBLE);
-
-        if (!isKeyboardOpen && navReady && rows.size() < 4 && isShortcutTabActive()) {
-            btnAdd.setVisibility(View.VISIBLE);
-            btnAdd.setAlpha(1.0f);
-            btnAdd.setScaleX(1.0f);
-            btnAdd.setScaleY(1.0f);
-        } else {
-            btnAdd.setVisibility(View.GONE);
-        }
-    }
-
-    public int getShortcutCount() {
-        return rows.size();
+        if (btnAdd != null) btnAdd.setVisibility(rows.size() < 4 ? View.VISIBLE : View.GONE);
     }
 
     public void destroy() {

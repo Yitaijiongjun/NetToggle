@@ -1,11 +1,6 @@
 package com.dhangofa.networktoggle.config;
 
-/**
- * Central configuration and state manager.
- * Reads and writes all the SharedPreferences for the app, including which execution mode
- * (Root/Shizuku) is selected, target SIM, saved network cycles, and any transient error states.
- * This acts as the single source of truth for app settings.
- */
+/** SIM, tile and shortcut preferences shared by the Shizuku-only app. */
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -19,13 +14,10 @@ import java.util.List;
 
 public final class AppPreferences {
     private static final String PREFS_NAME = "NetTogglePrefs";
-    private static final String KEY_EXEC_MODE = "exec_mode";
     private static final String KEY_TARGET_SIM = "target_sim";
     private static final String KEY_NETWORK_STATE = "net_state";
     private static final String KEY_LAST_NETWORK_CHECK = "last_network_check";
     private static final String KEY_AUTO_SIM_ERROR = "auto_sim_error";
-    private static final String KEY_EXTERNAL_AUTOMATION = "external_automation_enabled";
-    private static final String KEY_AUTOMATION_TOKEN = "automation_token";
     private static final String KEY_TILE_CYCLE_MODES = "tile_cycle_modes";
     private static final String KEY_TILE_ACTIVE_MODES = "tile_active_modes";
     private static final String KEY_AUTO_RESTORE_ENABLED = "auto_restore_enabled";
@@ -43,7 +35,6 @@ public final class AppPreferences {
 
     public static final int TILE_ERROR_NONE = 0;
     public static final int TILE_ERROR_SHIZUKU = 1;
-    public static final int TILE_ERROR_ROOT = 2;
     public static final int TILE_ERROR_CMD = 3;
     private static final String KEY_TILE_ERROR = "tile_error_state";
 
@@ -52,6 +43,16 @@ public final class AppPreferences {
     public AppPreferences(Context context) {
         preferences = context.getApplicationContext()
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        // Migrate the removed execution/broadcast options once; keep SIM, cycle
+        // and launcher shortcut settings intact on upgrade.
+        if (preferences.contains("exec_mode") || preferences.contains("external_automation_enabled")
+                || preferences.contains("automation_token")) {
+            preferences.edit().remove("exec_mode").remove("external_automation_enabled")
+                    .remove("automation_token").apply();
+        }
+        if (preferences.getInt(KEY_TILE_ERROR, TILE_ERROR_NONE) == 2) {
+            preferences.edit().putInt(KEY_TILE_ERROR, TILE_ERROR_NONE).apply();
+        }
     }
 
     public int getTileErrorState() {
@@ -71,8 +72,7 @@ public final class AppPreferences {
     }
 
     public ExecutionMode getExecutionMode() {
-        return ExecutionMode.fromValue(
-                preferences.getInt(KEY_EXEC_MODE, ExecutionMode.NONE.getValue()));
+        return ExecutionMode.SHIZUKU;
     }
 
     public TargetSim getTargetSim() {
@@ -95,14 +95,6 @@ public final class AppPreferences {
 
     public long getLastNetworkCheckTimestamp() {
         return preferences.getLong(KEY_LAST_NETWORK_CHECK, 0);
-    }
-
-    public boolean isExternalAutomationEnabled() {
-        return preferences.getBoolean(KEY_EXTERNAL_AUTOMATION, false);
-    }
-
-    public void setExternalAutomationEnabled(boolean enabled) {
-        preferences.edit().putBoolean(KEY_EXTERNAL_AUTOMATION, enabled).apply();
     }
 
     public boolean isAutoRestorePreferredModeEnabled() {
@@ -130,19 +122,6 @@ public final class AppPreferences {
         if (mode != null && mode != NetworkMode.UNKNOWN) {
             preferences.edit().putInt(KEY_LAST_USER_SELECTED_MODE, mode.getStateValue()).apply();
         }
-    }
-
-    public String getAutomationToken() {
-        String token = preferences.getString(KEY_AUTOMATION_TOKEN, "");
-        if (token == null || token.trim().isEmpty()) {
-            token = java.util.UUID.randomUUID().toString().replace("-", "");
-            preferences.edit().putString(KEY_AUTOMATION_TOKEN, token).apply();
-        }
-        return token;
-    }
-
-    public void setAutomationToken(String token) {
-        preferences.edit().putString(KEY_AUTOMATION_TOKEN, token).apply();
     }
 
     public void setLastNetworkCheckTimestamp(long timestamp) {
@@ -193,15 +172,6 @@ public final class AppPreferences {
                 .remove(KEY_LAST_ERROR_STDERR)
                 .remove("last_error_exception")
                 .remove(KEY_LAST_ERROR_TIMESTAMP)
-                .apply();
-    }
-
-    public void onExecutionModeChanged(ExecutionMode mode) {
-        setTileErrorState(TILE_ERROR_NONE);
-        preferences.edit()
-                .putInt(KEY_EXEC_MODE, mode.getValue())
-                .putInt(KEY_NETWORK_STATE, NetworkMode.UNKNOWN.getStateValue())
-                .putBoolean(KEY_AUTO_SIM_ERROR, false)
                 .apply();
     }
 

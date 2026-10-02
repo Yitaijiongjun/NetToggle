@@ -4,15 +4,13 @@ package com.dhangofa.networktoggle;
  * Quick Settings (QS) Tile Service.
  * This handles the actual toggle button that sits in the Android notification shade.
  * When tapped, it reads the current network mode, figures out the next mode based on the configured cycle,
- * and executes the change using the chosen backend (Root/Shizuku).
+ * and executes the change using the Shizuku backend.
  * It also dynamically draws the tile icon to reflect the currently active mode.
  */
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.provider.Settings;
-import com.dhangofa.networktoggle.automation.AutomationExecutor;
-import com.dhangofa.networktoggle.automation.AutomationRequest;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -241,9 +239,9 @@ public class NetworkTileService extends TileService {
 
     private void applyModeInternal(NetworkMode targetMode, ExecutionMode executionMode, boolean isAutoRestore) {
         try {
-            AutomationExecutor.execute(getApplicationContext(), new AutomationRequest(
-                    targetMode, appPreferences.getTargetSim(), false,
-                    isAutoRestore ? "Auto Restore" : "QS Tile", !isAutoRestore));
+            com.dhangofa.networktoggle.telephony.NetworkActionExecutor.apply(getApplicationContext(),
+                    targetMode, appPreferences.getTargetSim(), !isAutoRestore,
+                    isAutoRestore ? "Auto Restore" : "QS Tile");
         } catch (Throwable error) {
             appPreferences.setLastError("QS Tile", -1, "", "", error.toString());
             appPreferences.setTileErrorState(AppPreferences.TILE_ERROR_CMD);
@@ -279,12 +277,6 @@ public class NetworkTileService extends TileService {
                 updateTileSilently(tile);
                 return;
             }
-        } else if (errorState == AppPreferences.TILE_ERROR_ROOT) {
-            tile.setState(Tile.STATE_UNAVAILABLE);
-            tile.setLabel(getString(R.string.tile_root_unavailable));
-            tile.setIcon(TileIconManager.getCachedIcon("?", "", false));
-            updateTileSilently(tile);
-            return;
         } else if (errorState == AppPreferences.TILE_ERROR_CMD) {
             tile.setState(Tile.STATE_INACTIVE);
             tile.setLabel(getString(R.string.tile_error_check_app));

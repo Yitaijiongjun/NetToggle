@@ -146,7 +146,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:minHeight="38dp"
-            android:background="@drawable/shape_btn_test_broadcast"
+            android:background="@drawable/shape_btn_test_shortcut"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"

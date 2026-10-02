@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:clipToPadding="false" android:clipChildren="false" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:background="@drawable/shape_exec_card_bg" android:elevation="8dp" android:padding="16dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="12dp">
+            <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/shape_count_badge_bg" android:layout_marginEnd="12dp">
+                <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_magic_wand" android:tint="@color/cycle_accent" android:contentDescription="@string/routine_shortcuts" />
+            </FrameLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/routine_shortcuts" android:textSize="18sp" android:textStyle="bold" android:textColor="@color/text_primary" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/up_to_4_shortcuts" android:textSize="13sp" android:textColor="@color/text_secondary" />
+            </LinearLayout>
+            <TextView android:id="@+id/badgeShortcutCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/shape_count_badge_bg" android:paddingHorizontal="10dp" android:paddingVertical="4dp" android:text="@string/zero_of_four" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/shortcut_count_badge_text" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/routine_shortcuts_description" android:textSize="13sp" android:lineSpacingExtra="3sp" android:textColor="@color/text_secondary" android:layout_marginBottom="14dp" />
+    </LinearLayout>
+    <LinearLayout android:clipToPadding="false" android:clipChildren="false" android:id="@+id/shortcutsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+    <TextView android:id="@+id/bannerLimitReached" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/shape_banner_limit_reached" android:paddingVertical="14dp" android:paddingHorizontal="16dp" android:gravity="center" android:text="@string/maximum_4_shortcuts_configured" android:textColor="@color/text_tertiary" android:textSize="13sp" android:textStyle="bold" android:visibility="gone" android:layout_marginBottom="12dp" />
+    <Button android:id="@+id/btnAddShortcut" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/add_shortcut" android:minHeight="48dp" android:backgroundTint="@color/brand_primary_container" android:textColor="@color/brand_on_primary_container" />
+</LinearLayout>

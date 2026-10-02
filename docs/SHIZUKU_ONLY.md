@@ -24,4 +24,4 @@ BootReceiver 只处理系统开机和应用更新以清理旧缓存，仍为非�
 
 ## 验证范围
 
-scripts/check_surface.py 校验应用入口、非导出 BootReceiver、唯一滚动页面、快捷方式位置、无 Root/app_process 执行及资源引用完整性。GitHub Actions 同时运行 11 项网络回归测试和 Release/Debug 构建。不连接手机，不进行本地编译；实际 ROM 显示效果仍需安装后确认。
+scripts/check_surface.py 校验应用入口、非导出 BootReceiver、唯一滚动页面、快捷方式位置、无 Root/app_process 执行及资源引用完整性。GitHub Actions 同时运行 Release 变体的 11 项网络回归测试和 Release 构建，仅上传一个签名 APK。不连接手机，不进行本地编译；实际 ROM 显示效果仍需安装后确认。

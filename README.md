@@ -17,9 +17,9 @@ Root 执行路径、外部广播控制及其配置界面、指南页面、底部
 
 ## 构建与验证
 
-GitHub Actions 执行网络回归测试、单页/入口/资源检查，并生成 Debug 和已签名的 Release APK。使用仓库已有签名密钥时可以覆盖安装同签名版本。
+GitHub Actions 执行 Release 变体的网络回归测试、单页/入口/资源检查，仅上传一个已签名的 Release APK。使用仓库已有签名密钥时可以覆盖安装同签名版本。
 
-构建命令：`./gradlew testDebugUnitTest assembleRelease assembleDebug`。
+构建命令：`./gradlew testReleaseUnitTest assembleRelease`。
 
 ## 来源与许可
 
